@@ -57,6 +57,8 @@ typedef struct digital_output_s*digital_output_t;
 
 typedef struct digital_input_s*digital_input_t;
 
+int DigitalInputGetEvent(digital_input_t self);
+
 void DigitalOutputActivate(digital_output_t salida);
 
 void DigitalOutputDeactivate(digital_output_t salida);
@@ -72,6 +74,10 @@ digital_output_t DigitalOutputCreate(uint32_t puerto, uint8_t terminal);
 digital_input_t DigitalInputCreate(uint32_t gpio, uint8_t bit, bool inverted);
 
 bool DigitalInputRead(digital_input_t input);
+
+bool DigitalInputHasActivated(digital_input_t input);
+
+bool DigitalInputHasDeactivated(digital_input_t input);
 
 /* === End of conditional blocks =================================================================================== */
 

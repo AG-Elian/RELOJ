@@ -106,7 +106,6 @@ bool DigitalInputRead(digital_input_t self){
     if (self->inverted){
         current_state = !current_state;
     }
-    self->last_state = current_state;
     return current_state;
 }
 int DigitalInputGetEvent(digital_input_t self){

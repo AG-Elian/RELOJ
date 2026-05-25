@@ -274,19 +274,21 @@ static void SwitchLed(void) {
 }
 
 static void ToggleLed(void) {
-    static bool last_state = false;
-    bool current_state;
+    //static bool last_state = false;
+    //bool current_state;
 
-    current_state = (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_3_GPIO, TEC_3_BIT) == 0);
-    if ((current_state) && (!last_state)) {
+    //current_state = (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_3_GPIO, TEC_3_BIT) == 0);
+    //if ((current_state) && (!last_state)) {
+    if (DigitalInputHasActivated(tecla_3)) { // Si la tecla 3 está presionada... El estado activo de la tecla 3 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
         DigitalOutputToggle(led_amarillo);
         //Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT);
     }
-    last_state = current_state;
+    //last_state = current_state;
 }
 
 static void TestLed(void) {
-    if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_4_GPIO, TEC_4_BIT) == 0) {
+    //if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_4_GPIO, TEC_4_BIT) == 0) {
+    if (DigitalInputRead(tecla_4)) { // Si la tecla 4 está presionada... El estado activo de la tecla 4 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
         //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true);
         DigitalOutputActivate(led_verde);
 
