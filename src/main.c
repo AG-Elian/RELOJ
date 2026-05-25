@@ -37,10 +37,13 @@ SPDX-License-Identifier: MIT
 
 #include "board.h"
 #include "chip.h"
+#include "digital.h"
 #include <stdio.h>
+
 
 /* === Macros definitions ====================================================================== */
 
+// Este es un listado de constantes que representan cómo están conectadas las cosas en la placa
 #define LED_R_PORT 2
 #define LED_R_PIN  0
 #define LED_R_FUNC SCU_MODE_FUNC4
@@ -155,7 +158,7 @@ static void TestLed(void);
 static void Delay(void);
 
 /* === Public variable definitions ============================================================= */
-
+digital_output_t led_verde;
 /* === Private variable definitions ============================================================ */
 
 /* === Private function implementation ========================================================= */
@@ -183,8 +186,8 @@ static void ConfigureLeds(void) {
     Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT, true);
 
     Chip_SCU_PinMuxSet(LED_3_PORT, LED_3_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_3_FUNC);
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, false);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true);
+    Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, false); // El led verde se apaga inicialmente
+    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true); // El led verde se configura como salida
 }
 
 static void ConfigureKeys(void) {
@@ -204,6 +207,8 @@ static void ConfigureKeys(void) {
 static void FlashLed(void) {
     static int divisor = 0;
     static rgb_color_t state = LED_BLUE_OFF;
+    led_verde = DigitalOutputCreate(LED_3_GPIO, LED_3_BIT); // Ahora el led verde está asociado a la salida que maneja al led verde.
+    //Debo revisar todos los lugares donde está el led verde y reemplazarlo por mi objeto
 
     divisor++;
     if (divisor == 5) {
@@ -251,9 +256,12 @@ static void ToggleLed(void) {
 
 static void TestLed(void) {
     if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_4_GPIO, TEC_4_BIT) == 0) {
-        Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true);
+        //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true);
+        DigitalOutputActivate(led_verde);
+
     } else {
-        Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, false);
+        //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, false);
+        DigitalOutputDeactivate(led_verde);
     }
 }
 

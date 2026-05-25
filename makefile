@@ -1,5 +1,5 @@
 BOARD ?= edu-ciaa-nxp
-VERBOSE=y
+VERBOSE=n
 MUJU ?= ./muju
 
 include $(MUJU)/module/base/makefile
