@@ -62,6 +62,8 @@ digital_output_t DigitalOutputCreate(uint32_t puerto, uint8_t terminal){
     if (self){
         self -> puerto = puerto;
         self -> terminal = terminal;
+        DigitalOutputDeactivate(self); // El led se apaga inicialmente
+        Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, self->puerto, self->terminal, true);
     }
     return self;
 }
