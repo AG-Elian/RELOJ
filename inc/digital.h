@@ -36,6 +36,9 @@ SPDX-License-Identifier: MIT
 /* === Headers files inclusions ==================================================================================== */
 
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
 /* === Header for C++ compatibility ================================================================================ */
 
 #ifdef __cplusplus
@@ -44,7 +47,15 @@ extern "C" {
 
 /* === Public macros definitions =================================================================================== */
 
+#define ACTIVATE_EVENT 1
+
+#define DEACTIVATE_EVENT -1
+
+/* === Public data type declarations =============================================================================== */
+
 typedef struct digital_output_s*digital_output_t;
+
+typedef struct digital_input_s*digital_input_t;
 
 void DigitalOutputActivate(digital_output_t salida);
 
@@ -52,13 +63,16 @@ void DigitalOutputDeactivate(digital_output_t salida);
 
 void DigitalOutputToggle(digital_output_t salida);
 
-/* === Public data type declarations =============================================================================== */
-
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
 
 digital_output_t DigitalOutputCreate(uint32_t puerto, uint8_t terminal);
+
+digital_input_t DigitalInputCreate(uint32_t gpio, uint8_t bit, bool inverted);
+
+bool DigitalInputRead(digital_input_t input);
+
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus

@@ -42,8 +42,16 @@ SPDX-License-Identifier: MIT
 
 struct digital_output_s
 {
-    uint32_t puerto;
-    uint8_t terminal;
+    uint32_t puerto;  /**< Índice del puerto GPIO asociado a la salida */
+    uint8_t terminal; /**< Número de bit dentro del puerto GPIO */
+};
+
+struct digital_input_s
+{
+    uint32_t gpio;  /**< Índice del puerto GPIO asociado a la entrada */
+    uint8_t bit;     /**< Número de bit del puerto GPIO */
+    bool inverted;   /**< Indica si el estado activo es lógico 1 o lógico 0 */
+    bool last_state; /**< Último estado lógico leído, usado por @ref DigitalInputRead */
 };
 
 /* === Private function declarations =========================================================== */
@@ -80,4 +88,44 @@ void DigitalOutputToggle(digital_output_t self){
 
 }
 
+digital_input_t DigitalInputCreate(uint32_t gpio, uint8_t bit, bool inverted){
+    digital_input_t self;
+    self = malloc(sizeof(struct digital_input_s));
+    if (self){
+        self -> gpio = gpio;
+        self -> bit = bit;
+        self -> inverted = inverted;
+        self -> last_state = DigitalInputRead(self); // El estado inicial se lee para que el campo last_state tenga un valor coherente.
+        Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, self->gpio, self->bit, false); // Configuro el pin como entrada.
+    }
+    return self;
+}
+
+bool DigitalInputRead(digital_input_t self){
+    bool current_state = Chip_GPIO_GetPinState(LPC_GPIO_PORT, self->gpio, self->bit);
+    if (self->inverted){
+        current_state = !current_state;
+    }
+    self->last_state = current_state;
+    return current_state;
+}
+int DigitalInputGetEvent(digital_input_t self){
+    int resultado = 0;
+    bool current_state = DigitalInputRead(self);
+    if ((current_state) && (!self->last_state)){
+        resultado = ACTIVATE_EVENT;
+    } else if ((!current_state) && (self->last_state)){
+        resultado = DEACTIVATE_EVENT;
+    }
+    self->last_state = current_state;
+    return resultado;
+}
+
+bool DigitalInputHasActivated(digital_input_t self){
+    return DigitalInputGetEvent(self) == ACTIVATE_EVENT;
+}
+
+bool DigitalInputHasDeactivated(digital_input_t self){
+    return DigitalInputGetEvent(self) == DEACTIVATE_EVENT;
+}
 /* === End of documentation ==================================================================== */

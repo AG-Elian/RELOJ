@@ -166,6 +166,11 @@ digital_output_t led_rgb_red; // Asociado al led rojo del RGB.
 digital_output_t led_rgb_green; // Asociado al led verde del RGB.
 digital_output_t led_rgb_blue; // Asociado al led azul del RGB.
 
+digital_input_t tecla_1; // Asociada a TEC_1 de la placa.
+digital_input_t tecla_2; // Asociada a TEC_2 de la placa.
+digital_input_t tecla_3; // Asociada a TEC_3 de la placa.
+digital_input_t tecla_4; // Asociada a TEC_4 de la placa.
+
 /* === Private variable definitions ============================================================ */
 
 /* === Private function implementation ========================================================= */
@@ -205,16 +210,20 @@ static void ConfigureLeds(void) {
 
 static void ConfigureKeys(void) {
     Chip_SCU_PinMuxSet(TEC_1_PORT, TEC_1_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_1_FUNC);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_1_GPIO, TEC_1_BIT, false);
-
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_1_GPIO, TEC_1_BIT, false);
+    tecla_1 = DigitalInputCreate(TEC_1_GPIO, TEC_1_BIT, true); // Creo un objeto para manejar la tecla 1 y lo asocio a la entrada que maneja a la tecla 1. El estado activo de la tecla 1 es lógico 0, por eso el tercer parámetro es true.
+    
     Chip_SCU_PinMuxSet(TEC_2_PORT, TEC_2_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_2_FUNC);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_2_GPIO, TEC_2_BIT, false);
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_2_GPIO, TEC_2_BIT, false);
+    tecla_2 = DigitalInputCreate(TEC_2_GPIO, TEC_2_BIT, true); // Creo un objeto para manejar la tecla 2 y lo asocio a la entrada que maneja a la tecla 2. El estado activo de la tecla 2 es lógico 0, por eso el tercer parámetro es true.
 
     Chip_SCU_PinMuxSet(TEC_3_PORT, TEC_3_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_3_FUNC);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_3_GPIO, TEC_3_BIT, false);
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_3_GPIO, TEC_3_BIT, false);
+    tecla_3 = DigitalInputCreate(TEC_3_GPIO, TEC_3_BIT, true); // Creo un objeto para manejar la tecla 3 y lo asocio a la entrada que maneja a la tecla 3. El estado activo de la tecla 3 es lógico 0, por eso el tercer parámetro es true.
 
     Chip_SCU_PinMuxSet(TEC_4_PORT, TEC_4_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_4_FUNC);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_4_GPIO, TEC_4_BIT, false);
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_4_GPIO, TEC_4_BIT, false);
+    tecla_4 = DigitalInputCreate(TEC_4_GPIO, TEC_4_BIT, true); // Creo un objeto para manejar la tecla 4 y lo asocio a la entrada que maneja a la tecla 4. El estado activo de la tecla 4 es lógico 0, por eso el tercer parámetro es true.
 }
 
 static void FlashLed(void) {
@@ -252,11 +261,13 @@ static void FlashLed(void) {
 }
 
 static void SwitchLed(void) {
-    if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_1_GPIO, TEC_1_BIT) == 0) {
+    //if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_1_GPIO, TEC_1_BIT) == 0) {
+    if (DigitalInputRead(tecla_1)) { // Si la tecla 1 está presionada... El estado activo de la tecla 1 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
         //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, true);
         DigitalOutputActivate(led_rojo); // Enciendo el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
     }
-    if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_2_GPIO, TEC_2_BIT) == 0) {
+    //if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_2_GPIO, TEC_2_BIT) == 0) {
+    if (DigitalInputRead(tecla_2)) { // Si la tecla 2 está presionada... El estado activo de la tecla 2 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
         //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, false);
         DigitalOutputDeactivate(led_rojo); // Apago el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
     }
