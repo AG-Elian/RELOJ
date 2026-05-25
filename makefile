@@ -1,3 +1,4 @@
+MODULES = hal
 BOARD ?= edu-ciaa-nxp
 VERBOSE=n
 MUJU ?= ./muju

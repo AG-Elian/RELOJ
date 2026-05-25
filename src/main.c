@@ -38,6 +38,7 @@ SPDX-License-Identifier: MIT
 #include "board.h"
 #include "chip.h"
 #include "digital.h"
+#include "placa.h"
 #include <stdio.h>
 
 
@@ -125,32 +126,32 @@ typedef enum rgb_color_e {
 /**
  * @brief Function to configure pins and gpio bits used by board leds
  */
-static void ConfigureLeds(void);
+//static void ConfigureLeds(void);
 
 /**
  * @brief Function to configure pins and gpio bits used by board keys
  */
-static void ConfigureKeys(void);
+//static void ConfigureKeys(void);
 
 /**
  * @brief Function to flash RGB led in sequence
  */
-static void FlashLed(void);
+static void FlashLed(board_t placa);
 
 /**
  * @brief Function to switch on and off a led with two keys
  */
-static void SwitchLed(void);
+static void SwitchLed(board_t placa);
 
 /**
  * @brief Function to switch on and off a led with a single key
  */
-static void ToggleLed(void);
+static void ToggleLed(board_t placa);
 
 /**
  * @brief Function to turn on a led while a key is pressed
  */
-static void TestLed(void);
+static void TestLed(board_t placa);
 
 /**
  * @brief Function to generate a delay of approximately 100 ms
@@ -175,58 +176,7 @@ digital_input_t tecla_4; // Asociada a TEC_4 de la placa.
 
 /* === Private function implementation ========================================================= */
 
-static void ConfigureLeds(void) {
-    Chip_SCU_PinMuxSet(LED_R_PORT, LED_R_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_R_FUNC);
-    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, false);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, true);
-    led_rgb_red = DigitalOutputCreate(LED_R_GPIO, LED_R_BIT); // Creo un objeto para manejar el led rojo del RGB y lo asocio a la salida que maneja al led rojo del RGB.
-
-    Chip_SCU_PinMuxSet(LED_G_PORT, LED_G_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_G_FUNC);
-    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, false);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, true);
-    led_rgb_green = DigitalOutputCreate(LED_G_GPIO, LED_G_BIT); // Creo un objeto para manejar el led verde del RGB y lo asocio a la salida que maneja al led verde del RGB.
-
-    Chip_SCU_PinMuxSet(LED_B_PORT, LED_B_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_B_FUNC);
-    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, false);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, true);
-    led_rgb_blue = DigitalOutputCreate(LED_B_GPIO, LED_B_BIT); // Creo un objeto para manejar el led azul del RGB y lo asocio a la salida que maneja al led azul del RGB.
-
-    /******************/
-    Chip_SCU_PinMuxSet(LED_1_PORT, LED_1_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_1_FUNC);
-    led_rojo = DigitalOutputCreate(LED_1_GPIO, LED_1_BIT); // Creo un objeto para manejar el led rojo y lo asocio a la salida que maneja al led rojo.
-    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, false);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, true);
-
-    Chip_SCU_PinMuxSet(LED_2_PORT, LED_2_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_2_FUNC);
-    led_amarillo = DigitalOutputCreate(LED_2_GPIO, LED_2_BIT); // Creo un objeto para manejar el led amarillo y lo asocio a la salida que maneja al led amarillo.
-    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT, false);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT, true);
-
-    Chip_SCU_PinMuxSet(LED_3_PORT, LED_3_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_3_FUNC);
-    led_verde = DigitalOutputCreate(LED_3_GPIO, LED_3_BIT); // Creo un objeto para manejar el led verde y lo asocio a la salida que maneja al led verde.
-    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, false); // El led verde se apaga inicialmente
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true); // El led verde se configura como salida... Esto ya lo hace la función DigitalOutputCreate, así que no es necesario hacerlo aquí.
-}
-
-static void ConfigureKeys(void) {
-    Chip_SCU_PinMuxSet(TEC_1_PORT, TEC_1_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_1_FUNC);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_1_GPIO, TEC_1_BIT, false);
-    tecla_1 = DigitalInputCreate(TEC_1_GPIO, TEC_1_BIT, true); // Creo un objeto para manejar la tecla 1 y lo asocio a la entrada que maneja a la tecla 1. El estado activo de la tecla 1 es lógico 0, por eso el tercer parámetro es true.
-    
-    Chip_SCU_PinMuxSet(TEC_2_PORT, TEC_2_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_2_FUNC);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_2_GPIO, TEC_2_BIT, false);
-    tecla_2 = DigitalInputCreate(TEC_2_GPIO, TEC_2_BIT, true); // Creo un objeto para manejar la tecla 2 y lo asocio a la entrada que maneja a la tecla 2. El estado activo de la tecla 2 es lógico 0, por eso el tercer parámetro es true.
-
-    Chip_SCU_PinMuxSet(TEC_3_PORT, TEC_3_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_3_FUNC);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_3_GPIO, TEC_3_BIT, false);
-    tecla_3 = DigitalInputCreate(TEC_3_GPIO, TEC_3_BIT, true); // Creo un objeto para manejar la tecla 3 y lo asocio a la entrada que maneja a la tecla 3. El estado activo de la tecla 3 es lógico 0, por eso el tercer parámetro es true.
-
-    Chip_SCU_PinMuxSet(TEC_4_PORT, TEC_4_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | TEC_4_FUNC);
-    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, TEC_4_GPIO, TEC_4_BIT, false);
-    tecla_4 = DigitalInputCreate(TEC_4_GPIO, TEC_4_BIT, true); // Creo un objeto para manejar la tecla 4 y lo asocio a la entrada que maneja a la tecla 4. El estado activo de la tecla 4 es lógico 0, por eso el tercer parámetro es true.
-}
-
-static void FlashLed(void) {
+static void FlashLed(board_t placa) {
     static int divisor = 0;
     static rgb_color_t state = LED_BLUE_OFF;
 
@@ -238,63 +188,63 @@ static void FlashLed(void) {
         switch (state) {
         case LED_RED_ON:
             //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, true);
-            DigitalOutputActivate(led_rgb_red);
+            DigitalOutputActivate(placa->led_rgb_red);
             break;
         case LED_GREEN_ON:
             //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, true);
-            DigitalOutputActivate(led_rgb_green);
+            DigitalOutputActivate(placa->led_rgb_green);
             break;
         case LED_BLUE_ON:
             //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, true);
-            DigitalOutputActivate(led_rgb_blue);
+            DigitalOutputActivate(placa->led_rgb_blue);
             break;
         default:
             //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, false);
             //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, false);
             //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, false);
-            DigitalOutputDeactivate(led_rgb_red);
-            DigitalOutputDeactivate(led_rgb_green);
-            DigitalOutputDeactivate(led_rgb_blue);
+            DigitalOutputDeactivate(placa->led_rgb_red);
+            DigitalOutputDeactivate(placa->led_rgb_green);
+            DigitalOutputDeactivate(placa->led_rgb_blue);
             break;
         }
     }
 }
 
-static void SwitchLed(void) {
+static void SwitchLed(board_t placa) {
     //if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_1_GPIO, TEC_1_BIT) == 0) {
-    if (DigitalInputRead(tecla_1)) { // Si la tecla 1 está presionada... El estado activo de la tecla 1 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
+    if (DigitalInputRead(placa->tecla_prender)) { // Si la tecla 1 está presionada... El estado activo de la tecla 1 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
         //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, true);
-        DigitalOutputActivate(led_rojo); // Enciendo el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
+        DigitalOutputActivate(placa->led_rojo); // Enciendo el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
     }
     //if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_2_GPIO, TEC_2_BIT) == 0) {
-    if (DigitalInputRead(tecla_2)) { // Si la tecla 2 está presionada... El estado activo de la tecla 2 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
+    if (DigitalInputRead(placa->tecla_apagar)) { // Si la tecla 2 está presionada... El estado activo de la tecla 2 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
         //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, false);
-        DigitalOutputDeactivate(led_rojo); // Apago el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
+        DigitalOutputDeactivate(placa->led_rojo); // Apago el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
     }
 }
 
-static void ToggleLed(void) {
+static void ToggleLed(board_t placa) {
     //static bool last_state = false;
     //bool current_state;
 
     //current_state = (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_3_GPIO, TEC_3_BIT) == 0);
     //if ((current_state) && (!last_state)) {
-    if (DigitalInputHasActivated(tecla_3)) { // Si la tecla 3 está presionada... El estado activo de la tecla 3 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        DigitalOutputToggle(led_amarillo);
+    if (DigitalInputHasActivated(placa->tecla_cambiar)) { // Si la tecla 3 está presionada... El estado activo de la tecla 3 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
+        DigitalOutputToggle(placa->led_amarillo);
         //Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT);
     }
     //last_state = current_state;
 }
 
-static void TestLed(void) {
+static void TestLed(board_t placa) {
     //if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_4_GPIO, TEC_4_BIT) == 0) {
-    if (DigitalInputRead(tecla_4)) { // Si la tecla 4 está presionada... El estado activo de la tecla 4 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
+    if (DigitalInputRead(placa->tecla_probar)) { // Si la tecla 4 está presionada... El estado activo de la tecla 4 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
         //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true);
-        DigitalOutputActivate(led_verde);
+        DigitalOutputActivate(placa->led_verde);
 
     } else {
         //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, false);
-        DigitalOutputDeactivate(led_verde);
+        DigitalOutputDeactivate(placa->led_verde);
     }
 }
 
@@ -310,15 +260,17 @@ static void Delay(void) {
 
 int main(void) {
 
-    BoardSetup();
-    ConfigureLeds();
-    ConfigureKeys();
+    //BoardSetup();
+    //ConfigureLeds();
+    //ConfigureKeys();
+    board_t placa = BoardCreate(); // Creo un objeto para manejar la placa y lo asocio a la función que inicializa la placa. Esta función se encarga de configurar los leds y las teclas, así como de crear los objetos necesarios para manejarlos a través de la biblioteca digital.h.
 
     while (true) {
-        FlashLed();
-        SwitchLed();
-        ToggleLed();
-        TestLed();
+        
+        FlashLed(placa);
+        SwitchLed(placa);
+        ToggleLed(placa);
+        TestLed(placa);
 
         Delay();
     }
