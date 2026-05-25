@@ -158,9 +158,13 @@ static void TestLed(void);
 static void Delay(void);
 
 /* === Public variable definitions ============================================================= */
+
 digital_output_t led_verde; //Asociado a LED_3 de la placa, es decir, al led verde. Este objeto se va a usar para manejar el led verde a través de la biblioteca digital.h, en lugar de manejarlo directamente con las funciones de bajo nivel del chip.
 digital_output_t led_rojo; // Asociado al LED_1 de la placa.
 digital_output_t led_amarillo; // Asociado al LED_2 de la placa.
+digital_output_t led_rgb_red; // Asociado al led rojo del RGB.
+digital_output_t led_rgb_green; // Asociado al led verde del RGB.
+digital_output_t led_rgb_blue; // Asociado al led azul del RGB.
 
 /* === Private variable definitions ============================================================ */
 
@@ -168,16 +172,19 @@ digital_output_t led_amarillo; // Asociado al LED_2 de la placa.
 
 static void ConfigureLeds(void) {
     Chip_SCU_PinMuxSet(LED_R_PORT, LED_R_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_R_FUNC);
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, false);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, true);
+    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, false);
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, true);
+    led_rgb_red = DigitalOutputCreate(LED_R_GPIO, LED_R_BIT); // Creo un objeto para manejar el led rojo del RGB y lo asocio a la salida que maneja al led rojo del RGB.
 
     Chip_SCU_PinMuxSet(LED_G_PORT, LED_G_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_G_FUNC);
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, false);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, true);
+    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, false);
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, true);
+    led_rgb_green = DigitalOutputCreate(LED_G_GPIO, LED_G_BIT); // Creo un objeto para manejar el led verde del RGB y lo asocio a la salida que maneja al led verde del RGB.
 
     Chip_SCU_PinMuxSet(LED_B_PORT, LED_B_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_B_FUNC);
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, false);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, true);
+    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, false);
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, true);
+    led_rgb_blue = DigitalOutputCreate(LED_B_GPIO, LED_B_BIT); // Creo un objeto para manejar el led azul del RGB y lo asocio a la salida que maneja al led azul del RGB.
 
     /******************/
     Chip_SCU_PinMuxSet(LED_1_PORT, LED_1_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_1_FUNC);
@@ -221,18 +228,24 @@ static void FlashLed(void) {
 
         switch (state) {
         case LED_RED_ON:
-            Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, true);
+            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, true);
+            DigitalOutputActivate(led_rgb_red);
             break;
         case LED_GREEN_ON:
-            Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, true);
+            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, true);
+            DigitalOutputActivate(led_rgb_green);
             break;
         case LED_BLUE_ON:
-            Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, true);
+            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, true);
+            DigitalOutputActivate(led_rgb_blue);
             break;
         default:
-            Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, false);
-            Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, false);
-            Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, false);
+            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, false);
+            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, false);
+            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, false);
+            DigitalOutputDeactivate(led_rgb_red);
+            DigitalOutputDeactivate(led_rgb_green);
+            DigitalOutputDeactivate(led_rgb_blue);
             break;
         }
     }
