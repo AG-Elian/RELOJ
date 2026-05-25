@@ -68,7 +68,7 @@ digital_output_t DigitalOutputCreate(uint32_t puerto, uint8_t terminal){
     return self;
 }
 void DigitalOutputActivate(digital_output_t self){
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, self->puerto, self->terminal, true);
+    Chip_GPIO_SetPinState(LPC_GPIO_PORT, self->puerto, self->terminal, true); 
 }
 
 void DigitalOutputDeactivate(digital_output_t self){
@@ -76,6 +76,7 @@ void DigitalOutputDeactivate(digital_output_t self){
 }
 
 void DigitalOutputToggle(digital_output_t self){
+    Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, self->puerto, self->terminal); // Esta función hace exactamente lo mismo que la función Chip_GPIO_SetPinToggle, pero recibe como parámetro un objeto digital_output_t en lugar de recibir el puerto y el terminal por separado.
 
 }
 

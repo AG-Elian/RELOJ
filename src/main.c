@@ -158,7 +158,10 @@ static void TestLed(void);
 static void Delay(void);
 
 /* === Public variable definitions ============================================================= */
-digital_output_t led_verde;
+digital_output_t led_verde; //Asociado a LED_3 de la placa, es decir, al led verde. Este objeto se va a usar para manejar el led verde a través de la biblioteca digital.h, en lugar de manejarlo directamente con las funciones de bajo nivel del chip.
+digital_output_t led_rojo; // Asociado al LED_1 de la placa.
+digital_output_t led_amarillo; // Asociado al LED_2 de la placa.
+
 /* === Private variable definitions ============================================================ */
 
 /* === Private function implementation ========================================================= */
@@ -178,16 +181,19 @@ static void ConfigureLeds(void) {
 
     /******************/
     Chip_SCU_PinMuxSet(LED_1_PORT, LED_1_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_1_FUNC);
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, false);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, true);
+    led_rojo = DigitalOutputCreate(LED_1_GPIO, LED_1_BIT); // Creo un objeto para manejar el led rojo y lo asocio a la salida que maneja al led rojo.
+    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, false);
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, true);
 
     Chip_SCU_PinMuxSet(LED_2_PORT, LED_2_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_2_FUNC);
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT, false);
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT, true);
+    led_amarillo = DigitalOutputCreate(LED_2_GPIO, LED_2_BIT); // Creo un objeto para manejar el led amarillo y lo asocio a la salida que maneja al led amarillo.
+    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT, false);
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT, true);
 
     Chip_SCU_PinMuxSet(LED_3_PORT, LED_3_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_INACT | LED_3_FUNC);
-    Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, false); // El led verde se apaga inicialmente
-    Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true); // El led verde se configura como salida
+    led_verde = DigitalOutputCreate(LED_3_GPIO, LED_3_BIT); // Creo un objeto para manejar el led verde y lo asocio a la salida que maneja al led verde.
+    //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, false); // El led verde se apaga inicialmente
+    //Chip_GPIO_SetPinDIR(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true); // El led verde se configura como salida... Esto ya lo hace la función DigitalOutputCreate, así que no es necesario hacerlo aquí.
 }
 
 static void ConfigureKeys(void) {
@@ -207,8 +213,6 @@ static void ConfigureKeys(void) {
 static void FlashLed(void) {
     static int divisor = 0;
     static rgb_color_t state = LED_BLUE_OFF;
-    led_verde = DigitalOutputCreate(LED_3_GPIO, LED_3_BIT); // Ahora el led verde está asociado a la salida que maneja al led verde.
-    //Debo revisar todos los lugares donde está el led verde y reemplazarlo por mi objeto
 
     divisor++;
     if (divisor == 5) {
@@ -249,7 +253,8 @@ static void ToggleLed(void) {
 
     current_state = (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_3_GPIO, TEC_3_BIT) == 0);
     if ((current_state) && (!last_state)) {
-        Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT);
+        DigitalOutputToggle(led_amarillo);
+        //Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT);
     }
     last_state = current_state;
 }
