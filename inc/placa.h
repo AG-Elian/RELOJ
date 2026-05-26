@@ -47,24 +47,57 @@ extern "C" {
 
 /* === Public data type declarations =============================================================================== */
 
-typedef struct board_s{
-    digital_output_t led_verde; //Asociado a LED_3 de la placa, es decir, al led verde. Este objeto se va a usar para manejar el led verde a través de la biblioteca digital.h, en lugar de manejarlo directamente con las funciones de bajo nivel del chip.
-    digital_output_t led_rojo; // Asociado al LED_1 de la placa.
-    digital_output_t led_amarillo; // Asociado al LED_2 de la placa.
-    digital_output_t led_rgb_red; // Asociado al LED_R de la placa, es decir, al led rojo del led RGB.
-    digital_output_t led_rgb_green; // Asociado al LED_G de la placa, es decir, al led verde del led RGB.
-    digital_output_t led_rgb_blue; // Asociado al LED_B de la placa, es decir, al led azul del led RGB.
+/*! 
+ * @brief Estructura de abstracción de los periféricos de la placa.
+ * * Agrupa todas las entradas y salidas digitales de la placa EDU-CIAA para 
+ * ser manejadas a través de la biblioteca digital, en lugar de utilizar
+ * las funciones de bajo nivel del chip.
+ */
+typedef struct board_s {
+    //! Asociado a LED_3 de la placa, es decir, al led verde.
+    digital_output_t led_verde; 
+    
+    //! Asociado al LED_1 de la placa.
+    digital_output_t led_rojo; 
+    
+    //! Asociado al LED_2 de la placa.
+    digital_output_t led_amarillo; 
+    
+    //! Asociado al LED_R de la placa, es decir, al led rojo del led RGB.
+    digital_output_t led_rgb_red; 
+    
+    //! Asociado al LED_G de la placa, es decir, al led verde del led RGB.
+    digital_output_t led_rgb_green; 
+    
+    //! Asociado al LED_B de la placa, es decir, al led azul del led RGB.
+    digital_output_t led_rgb_blue; 
 
-    digital_input_t tecla_prender; // Asociada a TEC_1 de la placa.
-    digital_input_t tecla_apagar; // Asociada a TEC_2 de la placa.
-    digital_input_t tecla_cambiar; // Asociada a TEC_3 de la placa.
-    digital_input_t tecla_probar; // Asociada a TEC_4 de la placa.
-}const*const board_t;
+    //! Asociada a TEC_1 de la placa.
+    digital_input_t tecla_prender; 
+    
+    //! Asociada a TEC_2 de la placa.
+    digital_input_t tecla_apagar; 
+    
+    //! Asociada a TEC_3 de la placa.
+    digital_input_t tecla_cambiar; 
+    
+    //! Asociada a TEC_4 de la placa.
+    digital_input_t tecla_probar; 
+} const * const board_t;
 
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
+
+/*!
+ * @brief Inicializa el hardware de la placa.
+ * * Configura los pines correspondientes a las teclas y los LEDs utilizando 
+ * la capa de abstracción de hardware, y asigna los punteros dentro de la 
+ * estructura de la placa.
+ * * @return Puntero constante a la estructura @c board_t con los objetos inicializados.
+ */
 board_t BoardCreate();
+
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus

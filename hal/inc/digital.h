@@ -47,36 +47,94 @@ extern "C" {
 
 /* === Public macros definitions =================================================================================== */
 
+//! Representa un evento en el que se ha detectado una activación.
 #define ACTIVATE_EVENT 1
 
+//! Representa un evento en el que se ha detectado una desactivación.
 #define DEACTIVATE_EVENT -1
 
 /* === Public data type declarations =============================================================================== */
 
-typedef struct digital_output_s*digital_output_t;
+/*!
+ * @brief Tipo de dato opaco que representa una salida digital.
+ * * Este puntero encapsula la estructura interna que maneja la configuración
+ * y estado de un pin de salida digital del microcontrolador.
+ */
+typedef struct digital_output_s *digital_output_t;
 
-typedef struct digital_input_s*digital_input_t;
+/*!
+ * @brief Tipo de dato opaco que representa una entrada digital.
+ * * Este puntero encapsula la estructura interna que maneja la configuración
+ * y el estado de un pin de entrada digital del microcontrolador.
+ */
+typedef struct digital_input_s *digital_input_t;
 
-int DigitalInputGetEvent(digital_input_t self);
-
-void DigitalOutputActivate(digital_output_t salida);
-
-void DigitalOutputDeactivate(digital_output_t salida);
-
-void DigitalOutputToggle(digital_output_t salida);
 
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
 
+/*!
+ * @brief Crea y configura una nueva salida digital.
+ * * @param[in] puerto Identificador del puerto al que pertenece el pin (ej. GPIOA, GPIOB).
+ * @param[in] terminal Número de pin dentro del puerto configurado como salida.
+ * @return Puntero al objeto @c digital_output_t creado, o @c NULL si hubo un error.
+ */
 digital_output_t DigitalOutputCreate(uint32_t puerto, uint8_t terminal);
 
+/*!
+ * @brief Crea y configura una nueva entrada digital.
+ * * @param[in] gpio Identificador del puerto al que pertenece el pin.
+ * @param[in] bit Número de pin dentro del puerto configurado como entrada.
+ * @param[in] inverted Booleano que indica si la lógica de entrada está invertida (pull-up / pull-down).
+ * @return Puntero al objeto @c digital_input_t creado, o @c NULL si hubo un error.
+ */
 digital_input_t DigitalInputCreate(uint32_t gpio, uint8_t bit, bool inverted);
 
+/*!
+ * @brief Lee el estado lógico actual de una entrada digital.
+ * * @param[in] input Puntero al objeto de la entrada digital que se desea leer.
+ * @return @c true si la entrada está activa, @c false si está inactiva (considerando la lógica invertida si aplica).
+ */
 bool DigitalInputRead(digital_input_t input);
 
+/*!
+ * @brief Activa una salida digital específica.
+ * * @param[in] salida Puntero al objeto de la salida digital a encender/activar.
+ */
+void DigitalOutputActivate(digital_output_t salida);
+
+/*!
+ * @brief Desactiva una salida digital específica.
+ * * @param[in] salida Puntero al objeto de la salida digital a apagar/desactivar.
+ */
+void DigitalOutputDeactivate(digital_output_t salida);
+
+/*!
+ * @brief Invierte el estado actual de una salida digital (Toggle).
+ * * @param[in] salida Puntero al objeto de la salida digital a alternar.
+ */
+void DigitalOutputToggle(digital_output_t salida);
+
+/*!
+ * @brief Consulta y actualiza los eventos detectados en una entrada digital.
+ * * @param[in] self Puntero al objeto de la entrada digital.
+ * @return Un entero indicando el último evento detectado (ej. @c ACTIVATE_EVENT, @c DEACTIVATE_EVENT).
+ */
+int DigitalInputGetEvent(digital_input_t self);
+
+/*!
+ * @brief Verifica si ha ocurrido un evento de activación (flanco de subida o bajada según configuración) desde la última consulta.
+ * * @param[in] input Puntero al objeto de la entrada digital.
+ * @return @c true si la entrada pasó a estado activo, @c false en caso contrario.
+ */
 bool DigitalInputHasActivated(digital_input_t input);
 
+/*!
+ * @brief Verifica si ha ocurrido un evento de desactivación desde la última consulta.
+ * * @param[in] input Puntero al objeto de la entrada digital.
+ * @return @c true si la entrada pasó a estado inactivo, @c false en caso contrario.
+ */
 bool DigitalInputHasDeactivated(digital_input_t input);
 
 /* === End of conditional blocks =================================================================================== */
