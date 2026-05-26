@@ -187,21 +187,15 @@ static void FlashLed(board_t placa) {
 
         switch (state) {
         case LED_RED_ON:
-            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, true);
             DigitalOutputActivate(placa->led_rgb_red);
             break;
         case LED_GREEN_ON:
-            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, true);
             DigitalOutputActivate(placa->led_rgb_green);
             break;
         case LED_BLUE_ON:
-            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, true);
             DigitalOutputActivate(placa->led_rgb_blue);
             break;
         default:
-            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_R_GPIO, LED_R_BIT, false);
-            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_G_GPIO, LED_G_BIT, false);
-            //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_B_GPIO, LED_B_BIT, false);
             DigitalOutputDeactivate(placa->led_rgb_red);
             DigitalOutputDeactivate(placa->led_rgb_green);
             DigitalOutputDeactivate(placa->led_rgb_blue);
@@ -211,39 +205,29 @@ static void FlashLed(board_t placa) {
 }
 
 static void SwitchLed(board_t placa) {
-    //if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_1_GPIO, TEC_1_BIT) == 0) {
     if (DigitalInputRead(placa->tecla_prender)) { // Si la tecla 1 está presionada... El estado activo de la tecla 1 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, true);
         DigitalOutputActivate(placa->led_rojo); // Enciendo el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
     }
-    //if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_2_GPIO, TEC_2_BIT) == 0) {
     if (DigitalInputRead(placa->tecla_apagar)) { // Si la tecla 2 está presionada... El estado activo de la tecla 2 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_1_GPIO, LED_1_BIT, false);
         DigitalOutputDeactivate(placa->led_rojo); // Apago el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
     }
 }
 
 static void ToggleLed(board_t placa) {
-    //static bool last_state = false;
-    //bool current_state;
 
-    //current_state = (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_3_GPIO, TEC_3_BIT) == 0);
-    //if ((current_state) && (!last_state)) {
     if (DigitalInputHasActivated(placa->tecla_cambiar)) { // Si la tecla 3 está presionada... El estado activo de la tecla 3 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
         DigitalOutputToggle(placa->led_amarillo);
-        //Chip_GPIO_SetPinToggle(LPC_GPIO_PORT, LED_2_GPIO, LED_2_BIT);
     }
-    //last_state = current_state;
 }
 
 static void TestLed(board_t placa) {
-    //if (Chip_GPIO_ReadPortBit(LPC_GPIO_PORT, TEC_4_GPIO, TEC_4_BIT) == 0) {
+
     if (DigitalInputRead(placa->tecla_probar)) { // Si la tecla 4 está presionada... El estado activo de la tecla 4 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, true);
+        
         DigitalOutputActivate(placa->led_verde);
 
     } else {
-        //Chip_GPIO_SetPinState(LPC_GPIO_PORT, LED_3_GPIO, LED_3_BIT, false);
+
         DigitalOutputDeactivate(placa->led_verde);
     }
 }
@@ -260,9 +244,7 @@ static void Delay(void) {
 
 int main(void) {
 
-    //BoardSetup();
-    //ConfigureLeds();
-    //ConfigureKeys();
+
     board_t placa = BoardCreate(); // Creo un objeto para manejar la placa y lo asocio a la función que inicializa la placa. Esta función se encarga de configurar los leds y las teclas, así como de crear los objetos necesarios para manejarlos a través de la biblioteca digital.h.
 
     while (true) {

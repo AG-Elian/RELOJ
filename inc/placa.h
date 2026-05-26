@@ -30,7 +30,7 @@ SPDX-License-Identifier: MIT
 #define PLACA_H_
 
 /** @file placa.h
- ** @brief Plantilla para la creacion de archivos de cabeceras en lenguaje C
+ ** @brief Declaraciones de la biblioteca para gestión de la placa
  **/
 
 /* === Headers files inclusions ==================================================================================== */
