@@ -23,11 +23,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 SPDX-License-Identifier: MIT
 *************************************************************************************************/
 
-/** \brief EDU-CIAA-NXP board sample application
+/*! @file main.c
+ ** @brief Aplicación de ejemplo para la placa EDU-CIAA-NXP.
  **
- ** \addtogroup samples Samples
- ** \brief Samples applications with MUJU Framwork
- ** @{ */
+ ** @addtogroup samples Samples
+ ** @brief Aplicaciones de ejemplo con el framework MUJU.
+ ** @{ 
+ */
 
 /* === Headers files inclusions =============================================================== */
 
@@ -44,133 +46,133 @@ SPDX-License-Identifier: MIT
 
 /* === Macros definitions ====================================================================== */
 
-// Este es un listado de constantes que representan cómo están conectadas las cosas en la placa
-#define LED_R_PORT 2
-#define LED_R_PIN  0
-#define LED_R_FUNC SCU_MODE_FUNC4
-#define LED_R_GPIO 5
-#define LED_R_BIT  0
+/*! 
+ * @name Constantes de Hardware
+ * Listado de constantes que representan cómo están conectadas las cosas en la placa.
+ * @{ 
+ */
+#define LED_R_PORT 2             //!< Puerto del SCU para el LED Rojo del RGB
+#define LED_R_PIN  0             //!< Pin del SCU para el LED Rojo del RGB
+#define LED_R_FUNC SCU_MODE_FUNC4 //!< Función del SCU para el LED Rojo del RGB
+#define LED_R_GPIO 5             //!< Puerto GPIO para el LED Rojo del RGB
+#define LED_R_BIT  0             //!< Bit GPIO para el LED Rojo del RGB
 
-#define LED_G_PORT 2
-#define LED_G_PIN  1
-#define LED_G_FUNC SCU_MODE_FUNC4
-#define LED_G_GPIO 5
-#define LED_G_BIT  1
+#define LED_G_PORT 2             //!< Puerto del SCU para el LED Verde del RGB
+#define LED_G_PIN  1             //!< Pin del SCU para el LED Verde del RGB
+#define LED_G_FUNC SCU_MODE_FUNC4 //!< Función del SCU para el LED Verde del RGB
+#define LED_G_GPIO 5             //!< Puerto GPIO para el LED Verde del RGB
+#define LED_G_BIT  1             //!< Bit GPIO para el LED Verde del RGB
 
-#define LED_B_PORT 2
-#define LED_B_PIN  2
-#define LED_B_FUNC SCU_MODE_FUNC4
-#define LED_B_GPIO 5
-#define LED_B_BIT  2
+#define LED_B_PORT 2             //!< Puerto del SCU para el LED Azul del RGB
+#define LED_B_PIN  2             //!< Pin del SCU para el LED Azul del RGB
+#define LED_B_FUNC SCU_MODE_FUNC4 //!< Función del SCU para el LED Azul del RGB
+#define LED_B_GPIO 5             //!< Puerto GPIO para el LED Azul del RGB
+#define LED_B_BIT  2             //!< Bit GPIO para el LED Azul del RGB
 
-#define LED_1_PORT 2
-#define LED_1_PIN  10
-#define LED_1_FUNC SCU_MODE_FUNC0
-#define LED_1_GPIO 0
-#define LED_1_BIT  14
+#define LED_1_PORT 2             //!< Puerto del SCU para el LED 1 (Rojo)
+#define LED_1_PIN  10            //!< Pin del SCU para el LED 1
+#define LED_1_FUNC SCU_MODE_FUNC0 //!< Función del SCU para el LED 1
+#define LED_1_GPIO 0             //!< Puerto GPIO para el LED 1
+#define LED_1_BIT  14            //!< Bit GPIO para el LED 1
 
-#define LED_2_PORT 2
-#define LED_2_PIN  11
-#define LED_2_FUNC SCU_MODE_FUNC0
-#define LED_2_GPIO 1
-#define LED_2_BIT  11
+#define LED_2_PORT 2             //!< Puerto del SCU para el LED 2 (Amarillo)
+#define LED_2_PIN  11            //!< Pin del SCU para el LED 2
+#define LED_2_FUNC SCU_MODE_FUNC0 //!< Función del SCU para el LED 2
+#define LED_2_GPIO 1             //!< Puerto GPIO para el LED 2
+#define LED_2_BIT  11            //!< Bit GPIO para el LED 2
 
-#define LED_3_PORT 2
-#define LED_3_PIN  12
-#define LED_3_FUNC SCU_MODE_FUNC0
-#define LED_3_GPIO 1
-#define LED_3_BIT  12
+#define LED_3_PORT 2             //!< Puerto del SCU para el LED 3 (Verde)
+#define LED_3_PIN  12            //!< Pin del SCU para el LED 3
+#define LED_3_FUNC SCU_MODE_FUNC0 //!< Función del SCU para el LED 3
+#define LED_3_GPIO 1             //!< Puerto GPIO para el LED 3
+#define LED_3_BIT  12            //!< Bit GPIO para el LED 3
 
-#define TEC_1_PORT 1
-#define TEC_1_PIN  0
-#define TEC_1_FUNC SCU_MODE_FUNC0
-#define TEC_1_GPIO 0
-#define TEC_1_BIT  4
+#define TEC_1_PORT 1             //!< Puerto del SCU para la Tecla 1
+#define TEC_1_PIN  0             //!< Pin del SCU para la Tecla 1
+#define TEC_1_FUNC SCU_MODE_FUNC0 //!< Función del SCU para la Tecla 1
+#define TEC_1_GPIO 0             //!< Puerto GPIO para la Tecla 1
+#define TEC_1_BIT  4             //!< Bit GPIO para la Tecla 1
 
-#define TEC_2_PORT 1
-#define TEC_2_PIN  1
-#define TEC_2_FUNC SCU_MODE_FUNC0
-#define TEC_2_GPIO 0
-#define TEC_2_BIT  8
+#define TEC_2_PORT 1             //!< Puerto del SCU para la Tecla 2
+#define TEC_2_PIN  1             //!< Pin del SCU para la Tecla 2
+#define TEC_2_FUNC SCU_MODE_FUNC0 //!< Función del SCU para la Tecla 2
+#define TEC_2_GPIO 0             //!< Puerto GPIO para la Tecla 2
+#define TEC_2_BIT  8             //!< Bit GPIO para la Tecla 2
 
-#define TEC_3_PORT 1
-#define TEC_3_PIN  2
-#define TEC_3_FUNC SCU_MODE_FUNC0
-#define TEC_3_GPIO 0
-#define TEC_3_BIT  9
+#define TEC_3_PORT 1             //!< Puerto del SCU para la Tecla 3
+#define TEC_3_PIN  2             //!< Pin del SCU para la Tecla 3
+#define TEC_3_FUNC SCU_MODE_FUNC0 //!< Función del SCU para la Tecla 3
+#define TEC_3_GPIO 0             //!< Puerto GPIO para la Tecla 3
+#define TEC_3_BIT  9             //!< Bit GPIO para la Tecla 3
 
-#define TEC_4_PORT 1
-#define TEC_4_PIN  6
-#define TEC_4_FUNC SCU_MODE_FUNC0
-#define TEC_4_GPIO 1
-#define TEC_4_BIT  9
+#define TEC_4_PORT 1             //!< Puerto del SCU para la Tecla 4
+#define TEC_4_PIN  6             //!< Pin del SCU para la Tecla 4
+#define TEC_4_FUNC SCU_MODE_FUNC0 //!< Función del SCU para la Tecla 4
+#define TEC_4_GPIO 1             //!< Puerto GPIO para la Tecla 4
+#define TEC_4_BIT  9             //!< Bit GPIO para la Tecla 4
+/*! @} */
 
 /* === Private data type declarations ========================================================== */
 
-/**
- * @brief Enumeration with color sequence of RGB led
+/*!
+ * @brief Enumeración con la secuencia de colores del LED RGB.
+ * Define los estados de encendido y apagado para iterar en la función de destello.
  */
 typedef enum rgb_color_e {
-    LED_RED_ON = 0,
-    LED_RED_OFF,
-    LED_GREEN_ON,
-    LED_GREEN_OFF,
-    LED_BLUE_ON,
-    LED_BLUE_OFF,
+    LED_RED_ON = 0,    //!< Estado para encender el LED Rojo
+    LED_RED_OFF,       //!< Estado para apagar el LED Rojo
+    LED_GREEN_ON,      //!< Estado para encender el LED Verde
+    LED_GREEN_OFF,     //!< Estado para apagar el LED Verde
+    LED_BLUE_ON,       //!< Estado para encender el LED Azul
+    LED_BLUE_OFF,      //!< Estado para apagar el LED Azul
 } rgb_color_t;
 
 /* === Private variable declarations =========================================================== */
 
 /* === Private function declarations =========================================================== */
 
-/**
- * @brief Function to configure pins and gpio bits used by board leds
- */
-//static void ConfigureLeds(void);
-
-/**
- * @brief Function to configure pins and gpio bits used by board keys
- */
-//static void ConfigureKeys(void);
-
-/**
- * @brief Function to flash RGB led in sequence
+/*!
+ * @brief Alterna el color del LED RGB en secuencia.
+ * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
  */
 static void FlashLed(board_t placa);
 
-/**
- * @brief Function to switch on and off a led with two keys
+/*!
+ * @brief Enciende y apaga un LED específico utilizando dos teclas distintas.
+ * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
  */
 static void SwitchLed(board_t placa);
 
-/**
- * @brief Function to switch on and off a led with a single key
+/*!
+ * @brief Invierte el estado de un LED al detectar la activación de una tecla.
+ * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
  */
 static void ToggleLed(board_t placa);
 
-/**
- * @brief Function to turn on a led while a key is pressed
+/*!
+ * @brief Mantiene un LED encendido únicamente mientras la tecla correspondiente esté presionada.
+ * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
  */
 static void TestLed(board_t placa);
 
-/**
- * @brief Function to generate a delay of approximately 100 ms
+/*!
+ * @brief Genera un retardo bloqueante por software (aproximadamente 100 ms).
  */
 static void Delay(void);
 
 /* === Public variable definitions ============================================================= */
 
-digital_output_t led_verde; //Asociado a LED_3 de la placa, es decir, al led verde. Este objeto se va a usar para manejar el led verde a través de la biblioteca digital.h, en lugar de manejarlo directamente con las funciones de bajo nivel del chip.
-digital_output_t led_rojo; // Asociado al LED_1 de la placa.
-digital_output_t led_amarillo; // Asociado al LED_2 de la placa.
-digital_output_t led_rgb_red; // Asociado al led rojo del RGB.
-digital_output_t led_rgb_green; // Asociado al led verde del RGB.
-digital_output_t led_rgb_blue; // Asociado al led azul del RGB.
+digital_output_t led_verde;     //!< Asociado a LED_3 de la placa (LED verde) para manejo vía biblioteca.
+digital_output_t led_rojo;      //!< Asociado al LED_1 de la placa.
+digital_output_t led_amarillo;  //!< Asociado al LED_2 de la placa.
+digital_output_t led_rgb_red;   //!< Asociado al led rojo del RGB.
+digital_output_t led_rgb_green; //!< Asociado al led verde del RGB.
+digital_output_t led_rgb_blue;  //!< Asociado al led azul del RGB.
 
-digital_input_t tecla_1; // Asociada a TEC_1 de la placa.
-digital_input_t tecla_2; // Asociada a TEC_2 de la placa.
-digital_input_t tecla_3; // Asociada a TEC_3 de la placa.
-digital_input_t tecla_4; // Asociada a TEC_4 de la placa.
+digital_input_t tecla_1;        //!< Asociada a TEC_1 de la placa.
+digital_input_t tecla_2;        //!< Asociada a TEC_2 de la placa.
+digital_input_t tecla_3;        //!< Asociada a TEC_3 de la placa.
+digital_input_t tecla_4;        //!< Asociada a TEC_4 de la placa.
 
 /* === Private variable definitions ============================================================ */
 
@@ -242,8 +244,13 @@ static void Delay(void) {
 
 /* === Public function implementation ========================================================== */
 
+/*!
+ * @brief Función principal de la aplicación.
+ * * Inicializa el hardware llamando a @c BoardCreate y entra en un bucle infinito
+ * donde evalúa periódicamente el estado de las teclas y actualiza los LEDs.
+ * * @return Código de salida (0 por convención, aunque en este entorno no retorna).
+ */
 int main(void) {
-
 
     board_t placa = BoardCreate(); // Creo un objeto para manejar la placa y lo asocio a la función que inicializa la placa. Esta función se encarga de configurar los leds y las teclas, así como de crear los objetos necesarios para manejarlos a través de la biblioteca digital.h.
 
@@ -262,4 +269,4 @@ int main(void) {
 
 /* === End of documentation ==================================================================== */
 
-/** @} End of module definition for doxygen */
+/*! @} End of module definition for doxygen */
