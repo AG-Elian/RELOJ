@@ -89,12 +89,13 @@ static void PonchoUpdateDigits(uint8_t digit) {
     // 1. Apagar todos los dígitos (Asumiendo lógica positiva en la EDU-CIAA para los transistores)
     Chip_GPIO_ClearValue(LPC_GPIO_PORT, DIGITS_GPIO, DIGITS_MASK);
     
-    // 2. Encender solo el dígito correspondiente
+    // 2. Encender solo el dígito correspondiente, invirtiendo el orden físico
+    // Si 'digit' es 0 (el primero del arreglo), encendemos el DIGIT_4 (el de la izquierda)
     switch (digit) {
-        case 0: Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_1_GPIO, DIGIT_1_BIT, true); break;
-        case 1: Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_2_GPIO, DIGIT_2_BIT, true); break;
-        case 2: Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_3_GPIO, DIGIT_3_BIT, true); break;
-        case 3: Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_4_GPIO, DIGIT_4_BIT, true); break;
+        case 0: Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_4_GPIO, DIGIT_4_BIT, true); break;
+        case 1: Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_3_GPIO, DIGIT_3_BIT, true); break;
+        case 2: Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_2_GPIO, DIGIT_2_BIT, true); break;
+        case 3: Chip_GPIO_SetPinState(LPC_GPIO_PORT, DIGIT_1_GPIO, DIGIT_1_BIT, true); break;
     }
 }
 
