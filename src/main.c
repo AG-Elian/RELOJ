@@ -39,7 +39,8 @@ SPDX-License-Identifier: MIT
 
 #include "digital.h"
 #include "placa.h"
-
+#include "poncho.h"  // Agregado para el hardware del Poncho
+#include "screen.h"  // Agregado para la abstracción de la Pantalla
 
 /* === Macros definitions ====================================================================== */
 
@@ -47,63 +48,34 @@ SPDX-License-Identifier: MIT
 
 /*!
  * @brief Enumeración con la secuencia de colores del LED RGB.
- * Define los estados de encendido y apagado para iterar en la función de destello.
  */
 typedef enum rgb_color_e {
-    LED_RED_ON = 0,    //!< Estado para encender el LED Rojo
-    LED_RED_OFF,       //!< Estado para apagar el LED Rojo
-    LED_GREEN_ON,      //!< Estado para encender el LED Verde
-    LED_GREEN_OFF,     //!< Estado para apagar el LED Verde
-    LED_BLUE_ON,       //!< Estado para encender el LED Azul
-    LED_BLUE_OFF,      //!< Estado para apagar el LED Azul
+    LED_RED_ON = 0,    
+    LED_RED_OFF,       
+    LED_GREEN_ON,      
+    LED_GREEN_OFF,     
+    LED_BLUE_ON,       
+    LED_BLUE_OFF,      
 } rgb_color_t;
 
 /* === Private variable declarations =========================================================== */
 
 /* === Private function declarations =========================================================== */
 
-/*!
- * @brief Alterna el color del LED RGB en secuencia.
- * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
- */
 static void FlashLed(board_t placa);
-
-/*!
- * @brief Enciende y apaga un LED específico utilizando dos teclas distintas.
- * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
- */
 static void SwitchLed(board_t placa);
-
-/*!
- * @brief Invierte el estado de un LED al detectar la activación de una tecla.
- * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
- */
 static void ToggleLed(board_t placa);
-
-/*!
- * @brief Mantiene un LED encendido únicamente mientras la tecla correspondiente esté presionada.
- * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
- */
 static void TestLed(board_t placa);
 
 /*!
- * @brief Genera un retardo bloqueante por software (aproximadamente 100 ms).
+ * @brief Genera un retardo bloqueante por software.
+ * Adaptado para ser más corto y no interferir con el multiplexado.
  */
 static void Delay(void);
 
 /* === Public variable definitions ============================================================= */
 
-digital_output_t led_verde;     //!< Asociado a LED_3 de la placa (LED verde) para manejo vía biblioteca.
-digital_output_t led_rojo;      //!< Asociado al LED_1 de la placa.
-digital_output_t led_amarillo;  //!< Asociado al LED_2 de la placa.
-digital_output_t led_rgb_red;   //!< Asociado al led rojo del RGB.
-digital_output_t led_rgb_green; //!< Asociado al led verde del RGB.
-digital_output_t led_rgb_blue;  //!< Asociado al led azul del RGB.
-
-digital_input_t tecla_1;        //!< Asociada a TEC_1 de la placa.
-digital_input_t tecla_2;        //!< Asociada a TEC_2 de la placa.
-digital_input_t tecla_3;        //!< Asociada a TEC_3 de la placa.
-digital_input_t tecla_4;        //!< Asociada a TEC_4 de la placa.
+// ¡Eliminamos las variables globales de LEDs y Teclas que estaban aquí para cumplir con el feedback del docente!
 
 /* === Private variable definitions ============================================================ */
 
@@ -138,38 +110,33 @@ static void FlashLed(board_t placa) {
 }
 
 static void SwitchLed(board_t placa) {
-    if (DigitalInputRead(placa->tecla_prender)) { // Si la tecla 1 está presionada... El estado activo de la tecla 1 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        DigitalOutputActivate(placa->led_rojo); // Enciendo el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
+    if (DigitalInputRead(placa->tecla_prender)) { 
+        DigitalOutputActivate(placa->led_rojo); 
     }
-    if (DigitalInputRead(placa->tecla_apagar)) { // Si la tecla 2 está presionada... El estado activo de la tecla 2 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        DigitalOutputDeactivate(placa->led_rojo); // Apago el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
+    if (DigitalInputRead(placa->tecla_apagar)) { 
+        DigitalOutputDeactivate(placa->led_rojo); 
     }
 }
 
 static void ToggleLed(board_t placa) {
-
-    if (DigitalInputHasActivated(placa->tecla_cambiar)) { // Si la tecla 3 está presionada... El estado activo de la tecla 3 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
+    if (DigitalInputHasActivated(placa->tecla_cambiar)) { 
         DigitalOutputToggle(placa->led_amarillo);
     }
 }
 
 static void TestLed(board_t placa) {
-
-    if (DigitalInputRead(placa->tecla_probar)) { // Si la tecla 4 está presionada... El estado activo de la tecla 4 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        
+    if (DigitalInputRead(placa->tecla_probar)) { 
         DigitalOutputActivate(placa->led_verde);
-
     } else {
-
         DigitalOutputDeactivate(placa->led_verde);
     }
 }
 
 static void Delay(void) {
-    for (int index = 0; index < 100; index++) {
-        for (int delay = 0; delay < 25000; delay++) {
-            __asm("NOP");
-        }
+    // Redujimos el ciclo anidado externo. Si usamos demoras muy largas, 
+    // la pantalla de 7 segmentos parpadeará debido a la interrupción del multiplexado.
+    for (int delay = 0; delay < 25000; delay++) {
+        __asm("NOP");
     }
 }
 
@@ -177,15 +144,24 @@ static void Delay(void) {
 
 /*!
  * @brief Función principal de la aplicación.
- * * Inicializa el hardware llamando a @c BoardCreate y entra en un bucle infinito
- * donde evalúa periódicamente el estado de las teclas y actualiza los LEDs.
- * * @return Código de salida (0 por convención, aunque en este entorno no retorna).
+ *
+ * @return Código de salida (0 por convención, aunque en este entorno no retorna).
  */
 int main(void) {
 
-    board_t placa = BoardCreate(); // Creo un objeto para manejar la placa y lo asocio a la función que inicializa la placa. Esta función se encarga de configurar los leds y las teclas, así como de crear los objetos necesarios para manejarlos a través de la biblioteca digital.h.
+    board_t placa = BoardCreate(); 
+    display_t display = PonchoCreateDisplay(); // Inicializa pines del poncho y la capa HAL de la pantalla
+
+    // Preparamos un arreglo con los números BCD a mostrar (ej: "2026")
+    uint8_t digitos[] = {2, 0, 2, 6};
+    
+    // Escribimos el valor inicial en la memoria del display
+    DisplayWriteBCD(display, digitos, 4);
 
     while (true) {
+        
+        // Refresco constante del display multiplexado (debe ejecutarse en cada iteración)
+        DisplayRefresh(display);
         
         FlashLed(placa);
         SwitchLed(placa);
