@@ -85,8 +85,8 @@ static void FlashLed(board_t placa) {
     static int divisor = 0;
     static rgb_color_t state = LED_BLUE_OFF;
 
-    divisor++;
-    if (divisor == 5) {
+    divisor++; // Incrementamos el divisor en cada llamada. Cuando alcance 5, cambiaremos el estado del LED RGB.
+    if (divisor == 100) { // Ajustamos el umbral para que el cambio de color sea perceptible pero no demasiado rápido
         divisor = 0;
         state = (state + 1) % (LED_BLUE_OFF + 1);
 
