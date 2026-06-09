@@ -37,80 +37,11 @@ SPDX-License-Identifier: MIT
 #error "This program can only be compiled for the EDU-CIAA-NXP board"
 #endif
 
-#include "board.h"
-#include "chip.h"
 #include "digital.h"
 #include "placa.h"
-#include <stdio.h>
 
 
 /* === Macros definitions ====================================================================== */
-
-/*! 
- * @name Constantes de Hardware
- * Listado de constantes que representan cómo están conectadas las cosas en la placa.
- * @{ 
- */
-#define LED_R_PORT 2             //!< Puerto del SCU para el LED Rojo del RGB
-#define LED_R_PIN  0             //!< Pin del SCU para el LED Rojo del RGB
-#define LED_R_FUNC SCU_MODE_FUNC4 //!< Función del SCU para el LED Rojo del RGB
-#define LED_R_GPIO 5             //!< Puerto GPIO para el LED Rojo del RGB
-#define LED_R_BIT  0             //!< Bit GPIO para el LED Rojo del RGB
-
-#define LED_G_PORT 2             //!< Puerto del SCU para el LED Verde del RGB
-#define LED_G_PIN  1             //!< Pin del SCU para el LED Verde del RGB
-#define LED_G_FUNC SCU_MODE_FUNC4 //!< Función del SCU para el LED Verde del RGB
-#define LED_G_GPIO 5             //!< Puerto GPIO para el LED Verde del RGB
-#define LED_G_BIT  1             //!< Bit GPIO para el LED Verde del RGB
-
-#define LED_B_PORT 2             //!< Puerto del SCU para el LED Azul del RGB
-#define LED_B_PIN  2             //!< Pin del SCU para el LED Azul del RGB
-#define LED_B_FUNC SCU_MODE_FUNC4 //!< Función del SCU para el LED Azul del RGB
-#define LED_B_GPIO 5             //!< Puerto GPIO para el LED Azul del RGB
-#define LED_B_BIT  2             //!< Bit GPIO para el LED Azul del RGB
-
-#define LED_1_PORT 2             //!< Puerto del SCU para el LED 1 (Rojo)
-#define LED_1_PIN  10            //!< Pin del SCU para el LED 1
-#define LED_1_FUNC SCU_MODE_FUNC0 //!< Función del SCU para el LED 1
-#define LED_1_GPIO 0             //!< Puerto GPIO para el LED 1
-#define LED_1_BIT  14            //!< Bit GPIO para el LED 1
-
-#define LED_2_PORT 2             //!< Puerto del SCU para el LED 2 (Amarillo)
-#define LED_2_PIN  11            //!< Pin del SCU para el LED 2
-#define LED_2_FUNC SCU_MODE_FUNC0 //!< Función del SCU para el LED 2
-#define LED_2_GPIO 1             //!< Puerto GPIO para el LED 2
-#define LED_2_BIT  11            //!< Bit GPIO para el LED 2
-
-#define LED_3_PORT 2             //!< Puerto del SCU para el LED 3 (Verde)
-#define LED_3_PIN  12            //!< Pin del SCU para el LED 3
-#define LED_3_FUNC SCU_MODE_FUNC0 //!< Función del SCU para el LED 3
-#define LED_3_GPIO 1             //!< Puerto GPIO para el LED 3
-#define LED_3_BIT  12            //!< Bit GPIO para el LED 3
-
-#define TEC_1_PORT 1             //!< Puerto del SCU para la Tecla 1
-#define TEC_1_PIN  0             //!< Pin del SCU para la Tecla 1
-#define TEC_1_FUNC SCU_MODE_FUNC0 //!< Función del SCU para la Tecla 1
-#define TEC_1_GPIO 0             //!< Puerto GPIO para la Tecla 1
-#define TEC_1_BIT  4             //!< Bit GPIO para la Tecla 1
-
-#define TEC_2_PORT 1             //!< Puerto del SCU para la Tecla 2
-#define TEC_2_PIN  1             //!< Pin del SCU para la Tecla 2
-#define TEC_2_FUNC SCU_MODE_FUNC0 //!< Función del SCU para la Tecla 2
-#define TEC_2_GPIO 0             //!< Puerto GPIO para la Tecla 2
-#define TEC_2_BIT  8             //!< Bit GPIO para la Tecla 2
-
-#define TEC_3_PORT 1             //!< Puerto del SCU para la Tecla 3
-#define TEC_3_PIN  2             //!< Pin del SCU para la Tecla 3
-#define TEC_3_FUNC SCU_MODE_FUNC0 //!< Función del SCU para la Tecla 3
-#define TEC_3_GPIO 0             //!< Puerto GPIO para la Tecla 3
-#define TEC_3_BIT  9             //!< Bit GPIO para la Tecla 3
-
-#define TEC_4_PORT 1             //!< Puerto del SCU para la Tecla 4
-#define TEC_4_PIN  6             //!< Pin del SCU para la Tecla 4
-#define TEC_4_FUNC SCU_MODE_FUNC0 //!< Función del SCU para la Tecla 4
-#define TEC_4_GPIO 1             //!< Puerto GPIO para la Tecla 4
-#define TEC_4_BIT  9             //!< Bit GPIO para la Tecla 4
-/*! @} */
 
 /* === Private data type declarations ========================================================== */
 
