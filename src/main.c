@@ -150,18 +150,17 @@ static void Delay(void) {
 int main(void) {
 
     board_t placa = BoardCreate(); 
-    display_t display = PonchoCreateDisplay(); // Inicializa pines del poncho y la capa HAL de la pantalla
 
     // Preparamos un arreglo con los números BCD a mostrar (ej: "2026")
     uint8_t digitos[] = {2, 0, 2, 6};
     
     // Escribimos el valor inicial en la memoria del display
-    DisplayWriteBCD(display, digitos, 4);
+    DisplayWriteBCD(placa->display, digitos, 4);
 
     while (true) {
         
         // Refresco constante del display multiplexado (debe ejecutarse en cada iteración)
-        DisplayRefresh(display);
+        DisplayRefresh(placa->display);
         
         FlashLed(placa);
         SwitchLed(placa);
