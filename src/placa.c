@@ -204,9 +204,10 @@ board_t BoardCreate(void){
     placa_edu.accept = DigitalInputCreate(KEY_ACCEPT_GPIO, KEY_ACCEPT_BIT, true);
     placa_edu.cancel = DigitalInputCreate(KEY_CANCEL_GPIO, KEY_CANCEL_BIT, true);
 
-    // 4. Configuramos el zumbador (Buzzer)
-    Chip_SCU_PinMuxSet(BUZZER_PORT, BUZZER_PIN, SCU_MODE_INACT | BUZZER_FUNC);
-    placa_edu.buzzer = DigitalOutputCreate(BUZZER_GPIO, BUZZER_BIT);
+    // 4. Configuramos el zumbador (REPRESENTADO POR EL LED AZUL PARA PRUEBAS)
+    // Reutilizamos el objeto del led azul en lugar de configurar el pin real del buzzer
+    placa_edu.buzzer = placa_edu.led_rgb_blue;
+    
     return &placa_edu;
 }
 
