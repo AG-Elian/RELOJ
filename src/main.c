@@ -42,6 +42,12 @@ static void Delay(void);
 
 /* === Private function implementation ========================================================= */
 
+/*! 
+ * @brief Retardo por software (bloqueante).
+ * * Implementa un bucle iterativo que ejecuta instrucciones NOP (No Operation) 
+ * para generar una demora en el flujo del programa. 
+ */
+
 static void Delay(void) {
     for (int delay = 0; delay < 25000; delay++) {
         __asm("NOP");
@@ -49,6 +55,18 @@ static void Delay(void) {
 }
 
 /* === Public function implementation ========================================================== */
+
+/*! 
+ * @brief Función principal del sistema.
+ * * Punto de entrada de la aplicación. Se encarga de inicializar los recursos
+ * de hardware mediante el Board Support Package (BSP), configurar el estado inicial
+ * de la pantalla y el buzzer, y ejecutar el bucle infinito de control (Super Loop).
+ * Dentro del bucle gestiona:
+ * - El refresco multiplexado de la pantalla de 7 segmentos.
+ * - La lectura por sondeo (polling) de botones con filtrado por software.
+ * - La lógica de la cámara lenta (Slow-mo) para observar el multiplexado.
+ * * @return int Retorna siempre 0 (el flujo no debería salir del bucle infinito).
+ */
 
 int main(void) {
 
@@ -130,3 +148,7 @@ int main(void) {
 
     return 0;
 }
+
+/* === End of documentation ==================================================================== */
+
+/*! @} End of module definition for doxygen */

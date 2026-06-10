@@ -23,6 +23,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 SPDX-License-Identifier: MIT
 *************************************************************************************************/
 
+/*! @file screen.c
+ ** @brief Implementación del controlador de la pantalla multiplexada de 7 segmentos.
+ */
+
 #include "screen.h"
 #include <string.h>
 
@@ -69,6 +73,14 @@ static const uint8_t IMAGES[] = {
 
 /* === Public function implementation ========================================================== */
 
+/*!
+ * @brief Inicializa el objeto de la pantalla de 7 segmentos.
+ * Configura la cantidad de dígitos, reinicia la memoria y realiza la inyección
+ * de dependencias utilizando el Patrón Estrategia para vincular el hardware.
+ * @param[in] digits Cantidad total de dígitos de la pantalla.
+ * @param[in] driver Estructura con los punteros a función de bajo nivel para actualizar hardware.
+ * @return display_t Puntero al manejador (instancia) del display creado.
+ */
 display_t DisplayCreate(uint8_t digits, display_driver_t driver) {
     static struct display_s display = {0};
 
@@ -88,6 +100,14 @@ display_t DisplayCreate(uint8_t digits, display_driver_t driver) {
     return &display;
 }
 
+/*!
+ * @brief Escribe un arreglo de dígitos BCD en la memoria de la pantalla.
+ * Transforma los valores BCD en sus correspondientes mapas de bits para 7 segmentos,
+ * preservando el estado previo de los puntos decimales.
+ * @param[in] display Puntero a la instancia del display.
+ * @param[in] number Puntero al arreglo que contiene los dígitos (0-9) a escribir.
+ * @param[in] size Cantidad de dígitos en el arreglo.
+ */
 void DisplayWriteBCD(display_t display, uint8_t * number, uint8_t size) {
     // Preservamos los puntos decimales actuales
     for (int i = 0; i < size; i++) {
@@ -97,6 +117,13 @@ void DisplayWriteBCD(display_t display, uint8_t * number, uint8_t size) {
     }
 }
 
+/*!
+ * @brief Realiza el barrido de multiplexado de la pantalla.
+ * Enciende el dígito actual con sus correspondientes segmentos y gestiona
+ * el avance secuencial y la lógica de parpadeo (flashing). Debe llamarse de
+ * forma periódica constante (ej. cada 1 ms).
+ * @param[in] display Puntero a la instancia del display.
+ */
 void DisplayRefresh(display_t display) {
     // 1. Apagamos segmentos para evitar "Ghosting" (efecto fantasma)
     display->driver.UpdateSegments(0);
@@ -130,6 +157,13 @@ void DisplayRefresh(display_t display) {
     display->driver.UpdateSegments(current_segments);
 }
 
+/*!
+ * @brief Configura y activa el parpadeo intermitente de una porción de la pantalla.
+ * @param[in] display Puntero a la instancia del display.
+ * @param[in] from Índice del primer dígito que va a parpadear.
+ * @param[in] to Índice del último dígito que va a parpadear.
+ * @param[in] frecuency Cantidad de refrescos (ciclos completos) que dura cada fase (encendido/apagado). Si es 0 se detiene el parpadeo.
+ */
 void DisplayFlashDigits(display_t display, uint8_t from, uint8_t to, uint16_t frecuency) {
     display->flash_from = from;
     display->flash_to = to;
@@ -138,6 +172,13 @@ void DisplayFlashDigits(display_t display, uint8_t from, uint8_t to, uint16_t fr
     display->flash_state = 1;
 }
 
+/*!
+ * @brief Invierte el estado lógico de los puntos decimales de los dígitos indicados.
+ * Si el punto estaba apagado lo enciende y viceversa.
+ * @param[in] display Puntero a la instancia del display.
+ * @param[in] from Índice del dígito de inicio.
+ * @param[in] to Índice del dígito de fin.
+ */
 void DisplayToggleDots(display_t display, uint8_t from, uint8_t to) {
     for (int i = from; i <= to; i++) {
         if (i < display->digits) {
