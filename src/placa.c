@@ -35,6 +35,7 @@ SPDX-License-Identifier: MIT
 #include "placa.h"
 #include "board.h"
 #include "chip.h"
+#include "poncho.h"
 
 /* === Macros definitions ====================================================================== */
 
@@ -175,16 +176,38 @@ static void ConfigureKeys(struct board_s * self){
  * configura y asigna internamente los LEDs y las teclas.
  * * @return Puntero constante @c board_t a la estructura estática inicializada con los periféricos.
  */
-board_t BoardCreate(){
-    static struct board_s self;
+board_t BoardCreate(void){
+    static struct board_s placa_edu;
 
     BoardSetup(); // Configuro el sistema de la placa, esto es necesario para poder usar las funciones de bajo nivel del chip para configurar los pines y los gpio bits.
 
-    ConfigureLeds(&self);
-    
-    ConfigureKeys(&self);
-    
-    return &self;
+    ConfigureLeds(&placa_edu);
+
+    ConfigureKeys(&placa_edu);
+
+    // 1. Inicializamos y guardamos la pantalla en nuestra placa
+    placa_edu.display = PonchoCreateDisplay();
+
+    // 2. Configuramos los pines de las nuevas teclas del poncho (SCU)
+    Chip_SCU_PinMuxSet(KEY_F1_PORT, KEY_F1_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | KEY_F1_FUNC);
+    Chip_SCU_PinMuxSet(KEY_F2_PORT, KEY_F2_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | KEY_F2_FUNC);
+    Chip_SCU_PinMuxSet(KEY_F3_PORT, KEY_F3_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | KEY_F3_FUNC);
+    Chip_SCU_PinMuxSet(KEY_F4_PORT, KEY_F4_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | KEY_F4_FUNC);
+    Chip_SCU_PinMuxSet(KEY_ACCEPT_PORT, KEY_ACCEPT_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | KEY_ACCEPT_FUNC);
+    Chip_SCU_PinMuxSet(KEY_CANCEL_PORT, KEY_CANCEL_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | KEY_CANCEL_FUNC);
+
+    // 3. Creamos las instancias de digital_input_t (asumiendo lógica invertida por los Pull-Ups)
+    placa_edu.f1 = DigitalInputCreate(KEY_F1_GPIO, KEY_F1_BIT, true);
+    placa_edu.f2 = DigitalInputCreate(KEY_F2_GPIO, KEY_F2_BIT, true);
+    placa_edu.f3 = DigitalInputCreate(KEY_F3_GPIO, KEY_F3_BIT, true);
+    placa_edu.f4 = DigitalInputCreate(KEY_F4_GPIO, KEY_F4_BIT, true);
+    placa_edu.accept = DigitalInputCreate(KEY_ACCEPT_GPIO, KEY_ACCEPT_BIT, true);
+    placa_edu.cancel = DigitalInputCreate(KEY_CANCEL_GPIO, KEY_CANCEL_BIT, true);
+
+    // 4. Configuramos el zumbador (Buzzer)
+    Chip_SCU_PinMuxSet(BUZZER_PORT, BUZZER_PIN, SCU_MODE_INACT | BUZZER_FUNC);
+    placa_edu.buzzer = DigitalOutputCreate(BUZZER_GPIO, BUZZER_BIT);
+    return &placa_edu;
 }
 
 /* === End of documentation ==================================================================== */
