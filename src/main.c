@@ -120,7 +120,7 @@ int main(void) {
                 DisplayWriteBCD(placa->display, digitos, 4);
             }
 
-            // Tecla CANCEL: Activa la demostración del multiplexado
+            // Tecla CANCEL: Activa/Desactiva la demostración del multiplexado
             if (DigitalInputHasActivated(placa->cancel)) {
                 modo_lento = !modo_lento; // Alternar entre rápido y lento
                 
@@ -136,7 +136,7 @@ int main(void) {
         }
 
         // --- 3. PRUEBA DE BUZZER / LED AZUL ---
-        // Mientras mantengamos presionada la tecla ACCEPT, suena
+        // Mientras mantengamos presionada la tecla ACCEPT, suena el buzzer (LED Azul encendido). Al soltarla, se apaga.
         if (DigitalInputRead(placa->accept)) {
             DigitalOutputDeactivate(placa->buzzer); // Lógica invertida: Prende
         } else {
