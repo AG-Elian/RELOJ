@@ -24,14 +24,8 @@ SPDX-License-Identifier: MIT
 *************************************************************************************************/
 
 /*! @file main.c
- ** @brief Aplicación de ejemplo para la placa EDU-CIAA-NXP.
- **
- ** @addtogroup samples Samples
- ** @brief Aplicaciones de ejemplo con el framework MUJU.
- ** @{ 
+ ** @brief Aplicación de prueba del Poncho para la placa EDU-CIAA-NXP.
  */
-
-/* === Headers files inclusions =============================================================== */
 
 #ifndef EDU_CIAA_NXP
 #error "This program can only be compiled for the EDU-CIAA-NXP board"
@@ -39,158 +33,115 @@ SPDX-License-Identifier: MIT
 
 #include "digital.h"
 #include "placa.h"
-
-
-/* === Macros definitions ====================================================================== */
-
-/* === Private data type declarations ========================================================== */
-
-/*!
- * @brief Enumeración con la secuencia de colores del LED RGB.
- * Define los estados de encendido y apagado para iterar en la función de destello.
- */
-typedef enum rgb_color_e {
-    LED_RED_ON = 0,    //!< Estado para encender el LED Rojo
-    LED_RED_OFF,       //!< Estado para apagar el LED Rojo
-    LED_GREEN_ON,      //!< Estado para encender el LED Verde
-    LED_GREEN_OFF,     //!< Estado para apagar el LED Verde
-    LED_BLUE_ON,       //!< Estado para encender el LED Azul
-    LED_BLUE_OFF,      //!< Estado para apagar el LED Azul
-} rgb_color_t;
-
-/* === Private variable declarations =========================================================== */
+#include "poncho.h"  
+#include "screen.h"  
 
 /* === Private function declarations =========================================================== */
 
-/*!
- * @brief Alterna el color del LED RGB en secuencia.
- * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
- */
-static void FlashLed(board_t placa);
-
-/*!
- * @brief Enciende y apaga un LED específico utilizando dos teclas distintas.
- * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
- */
-static void SwitchLed(board_t placa);
-
-/*!
- * @brief Invierte el estado de un LED al detectar la activación de una tecla.
- * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
- */
-static void ToggleLed(board_t placa);
-
-/*!
- * @brief Mantiene un LED encendido únicamente mientras la tecla correspondiente esté presionada.
- * * @param[in] placa Puntero constante a la estructura con los periféricos de la placa.
- */
-static void TestLed(board_t placa);
-
-/*!
- * @brief Genera un retardo bloqueante por software (aproximadamente 100 ms).
- */
 static void Delay(void);
-
-/* === Public variable definitions ============================================================= */
-
-digital_output_t led_verde;     //!< Asociado a LED_3 de la placa (LED verde) para manejo vía biblioteca.
-digital_output_t led_rojo;      //!< Asociado al LED_1 de la placa.
-digital_output_t led_amarillo;  //!< Asociado al LED_2 de la placa.
-digital_output_t led_rgb_red;   //!< Asociado al led rojo del RGB.
-digital_output_t led_rgb_green; //!< Asociado al led verde del RGB.
-digital_output_t led_rgb_blue;  //!< Asociado al led azul del RGB.
-
-digital_input_t tecla_1;        //!< Asociada a TEC_1 de la placa.
-digital_input_t tecla_2;        //!< Asociada a TEC_2 de la placa.
-digital_input_t tecla_3;        //!< Asociada a TEC_3 de la placa.
-digital_input_t tecla_4;        //!< Asociada a TEC_4 de la placa.
-
-/* === Private variable definitions ============================================================ */
 
 /* === Private function implementation ========================================================= */
 
-static void FlashLed(board_t placa) {
-    static int divisor = 0;
-    static rgb_color_t state = LED_BLUE_OFF;
-
-    divisor++;
-    if (divisor == 5) {
-        divisor = 0;
-        state = (state + 1) % (LED_BLUE_OFF + 1);
-
-        switch (state) {
-        case LED_RED_ON:
-            DigitalOutputActivate(placa->led_rgb_red);
-            break;
-        case LED_GREEN_ON:
-            DigitalOutputActivate(placa->led_rgb_green);
-            break;
-        case LED_BLUE_ON:
-            DigitalOutputActivate(placa->led_rgb_blue);
-            break;
-        default:
-            DigitalOutputDeactivate(placa->led_rgb_red);
-            DigitalOutputDeactivate(placa->led_rgb_green);
-            DigitalOutputDeactivate(placa->led_rgb_blue);
-            break;
-        }
-    }
-}
-
-static void SwitchLed(board_t placa) {
-    if (DigitalInputRead(placa->tecla_prender)) { // Si la tecla 1 está presionada... El estado activo de la tecla 1 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        DigitalOutputActivate(placa->led_rojo); // Enciendo el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
-    }
-    if (DigitalInputRead(placa->tecla_apagar)) { // Si la tecla 2 está presionada... El estado activo de la tecla 2 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        DigitalOutputDeactivate(placa->led_rojo); // Apago el led rojo usando la función de la biblioteca digital.h, en lugar de usar la función de bajo nivel del chip.
-    }
-}
-
-static void ToggleLed(board_t placa) {
-
-    if (DigitalInputHasActivated(placa->tecla_cambiar)) { // Si la tecla 3 está presionada... El estado activo de la tecla 3 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        DigitalOutputToggle(placa->led_amarillo);
-    }
-}
-
-static void TestLed(board_t placa) {
-
-    if (DigitalInputRead(placa->tecla_probar)) { // Si la tecla 4 está presionada... El estado activo de la tecla 4 es lógico 0, pero la función DigitalInputRead devuelve true cuando la tecla está presionada, así que no es necesario invertir el resultado.
-        
-        DigitalOutputActivate(placa->led_verde);
-
-    } else {
-
-        DigitalOutputDeactivate(placa->led_verde);
-    }
-}
+/*! 
+ * @brief Retardo por software (bloqueante).
+ * * Implementa un bucle iterativo que ejecuta instrucciones NOP (No Operation) 
+ * para generar una demora en el flujo del programa. 
+ */
 
 static void Delay(void) {
-    for (int index = 0; index < 100; index++) {
-        for (int delay = 0; delay < 25000; delay++) {
-            __asm("NOP");
-        }
+    for (int delay = 0; delay < 25000; delay++) {
+        __asm("NOP");
     }
 }
 
 /* === Public function implementation ========================================================== */
 
-/*!
- * @brief Función principal de la aplicación.
- * * Inicializa el hardware llamando a @c BoardCreate y entra en un bucle infinito
- * donde evalúa periódicamente el estado de las teclas y actualiza los LEDs.
- * * @return Código de salida (0 por convención, aunque en este entorno no retorna).
+/*! 
+ * @brief Función principal del sistema.
+ * * Punto de entrada de la aplicación. Se encarga de inicializar los recursos
+ * de hardware mediante el Board Support Package (BSP), configurar el estado inicial
+ * de la pantalla y el buzzer, y ejecutar el bucle infinito de control (Super Loop).
+ * Dentro del bucle gestiona:
+ * - El refresco multiplexado de la pantalla de 7 segmentos.
+ * - La lectura por sondeo (polling) de botones con filtrado por software.
+ * - La lógica de la cámara lenta (Slow-mo) para observar el multiplexado.
+ * * @return int Retorna siempre 0 (el flujo no debería salir del bucle infinito).
  */
+
 int main(void) {
 
-    board_t placa = BoardCreate(); // Creo un objeto para manejar la placa y lo asocio a la función que inicializa la placa. Esta función se encarga de configurar los leds y las teclas, así como de crear los objetos necesarios para manejarlos a través de la biblioteca digital.h.
+    board_t placa = BoardCreate(); 
+
+    uint8_t digitos[] = {0, 0, 0, 0};
+    DisplayWriteBCD(placa->display, digitos, 4);
+
+    // Contadores para separar la velocidad de lectura y de refresco
+    uint16_t contador_rebote = 0;
+    uint16_t contador_multiplexado = 0;
+    
+    // Bandera para activar la demostración en cámara lenta
+    bool modo_lento = false;
+
+    // Nos aseguramos de que el LED azul (buzzer) arranque apagado (Lógica Negativa)
+    DigitalOutputActivate(placa->buzzer);
 
     while (true) {
         
-        FlashLed(placa);
-        SwitchLed(placa);
-        ToggleLed(placa);
-        TestLed(placa);
+        // --- 1. REFRESCO DE PANTALLA (MULTIPLEXADO) ---
+        contador_multiplexado++;
+        // Si el modo lento está activo, tardamos 60 ciclos en refrescar. Si no, refrescamos en cada 1 ciclo.
+        uint16_t limite_refresco = modo_lento ? 80 : 1; 
+        
+        if (contador_multiplexado >= limite_refresco) {
+            contador_multiplexado = 0;
+            DisplayRefresh(placa->display);
+        }
+
+        // --- 2. LECTURA DE BOTONES (ANTIRREBOTE) ---
+        contador_rebote++;
+        if (contador_rebote >= 40) { 
+            contador_rebote = 0;
+            
+            // F1 a F4: Incrementan los dígitos
+            if (DigitalInputHasActivated(placa->f4)) { 
+                digitos[0] = (digitos[0] + 1) % 10;
+                DisplayWriteBCD(placa->display, digitos, 4);
+            }
+            if (DigitalInputHasActivated(placa->f3)) { 
+                digitos[1] = (digitos[1] + 1) % 10;
+                DisplayWriteBCD(placa->display, digitos, 4);
+            }
+            if (DigitalInputHasActivated(placa->f2)) { 
+                digitos[2] = (digitos[2] + 1) % 10;
+                DisplayWriteBCD(placa->display, digitos, 4);
+            }
+            if (DigitalInputHasActivated(placa->f1)) { 
+                digitos[3] = (digitos[3] + 1) % 10;
+                DisplayWriteBCD(placa->display, digitos, 4);
+            }
+
+            // Tecla CANCEL: Activa/Desactiva la demostración del multiplexado
+            if (DigitalInputHasActivated(placa->cancel)) {
+                modo_lento = !modo_lento; // Alternar entre rápido y lento
+                
+                // Al activar la cámara lenta, forzamos los números 1, 2, 3, 4
+                if (modo_lento) {
+                    digitos[0] = 1;
+                    digitos[1] = 2;
+                    digitos[2] = 3;
+                    digitos[3] = 4;
+                    DisplayWriteBCD(placa->display, digitos, 4);
+                }
+            }
+        }
+
+        // --- 3. PRUEBA DE BUZZER / LED AZUL ---
+        // Mientras mantengamos presionada la tecla ACCEPT, suena el buzzer (LED Azul encendido). Al soltarla, se apaga.
+        if (DigitalInputRead(placa->accept)) {
+            DigitalOutputDeactivate(placa->buzzer); // Lógica invertida: Prende
+        } else {
+            DigitalOutputActivate(placa->buzzer);   // Lógica invertida: Apaga
+        }
 
         Delay();
     }

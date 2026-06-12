@@ -2,6 +2,8 @@
 Copyright (c) 2015, Esteban Daniel Volentini <evolentini@herrera.unt.edu.ar>
 Copyright (c) 2015, Laboratorio de Microprocesadores, Universidad Nacional de Tucumán, Argentina
 
+Copyright (c) 2026, Elian Leandro Aramallo Guantay <aramallog.elian@gmail.com>
+
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
 documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
 rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
@@ -22,12 +24,15 @@ SPDX-License-Identifier: MIT
 #define PONCHO_H_
 
 /** @file poncho.h
- ** @brief Definiciones de hardware del poncho educativo UNT
+ ** @brief Definiciones de hardware del poncho educativo UNT.
+ ** Contiene la configuración de pines, puertos y macros necesarias para interactuar
+ ** con el hardware específico del Poncho montado sobre la placa EDU-CIAA-NXP.
  **/
 
 /* === Headers files inclusions ==================================================================================== */
 
 #include "chip.h"
+#include "screen.h"
 
 /* === Header for C++ compatibility ================================================================================ */
 
@@ -37,9 +42,10 @@ extern "C" {
 
 /* === Public macros definitions =================================================================================== */
 
-/** @brief Puerto GPIO compartido por los cuatro dígitos del display */
+/** @brief Puerto GPIO compartido por los cuatro dígitos del display multiplexado */
 #define DIGITS_GPIO   0
 
+/*! @brief Configuraciones de hardware para el Dígito 1 del display */
 #define DIGIT_1_PORT 0
 #define DIGIT_1_PIN  0
 #define DIGIT_1_FUNC SCU_MODE_FUNC0
@@ -47,6 +53,7 @@ extern "C" {
 #define DIGIT_1_BIT  0
 #define DIGIT_1_MASK (1 << DIGIT_1_BIT)
 
+/*! @brief Configuraciones de hardware para el Dígito 2 del display */
 #define DIGIT_2_PORT 0
 #define DIGIT_2_PIN  1
 #define DIGIT_2_FUNC SCU_MODE_FUNC0
@@ -54,6 +61,7 @@ extern "C" {
 #define DIGIT_2_BIT  1
 #define DIGIT_2_MASK (1 << DIGIT_2_BIT)
 
+/*! @brief Configuraciones de hardware para el Dígito 3 del display */
 #define DIGIT_3_PORT 1
 #define DIGIT_3_PIN  15
 #define DIGIT_3_FUNC SCU_MODE_FUNC0
@@ -61,6 +69,7 @@ extern "C" {
 #define DIGIT_3_BIT  2
 #define DIGIT_3_MASK (1 << DIGIT_3_BIT)
 
+/*! @brief Configuraciones de hardware para el Dígito 4 del display */
 #define DIGIT_4_PORT 1
 #define DIGIT_4_PIN  17
 #define DIGIT_4_FUNC SCU_MODE_FUNC0
@@ -68,11 +77,14 @@ extern "C" {
 #define DIGIT_4_BIT  3
 #define DIGIT_4_MASK (1 << DIGIT_4_BIT)
 
+/*! @brief Máscara global para encender/apagar todos los dígitos simultáneamente */
 #define DIGITS_MASK (DIGIT_1_MASK | DIGIT_2_MASK | DIGIT_3_MASK | DIGIT_4_MASK)
 
-/** @brief Puerto GPIO de los segmentos A–G del display */
+
+/** @brief Puerto GPIO compartido por los segmentos A-G del display */
 #define SEGMENTS_GPIO 2
 
+/*! @brief Configuraciones de hardware para el Segmento A */
 #define SEGMENT_A_PORT 4
 #define SEGMENT_A_PIN  0
 #define SEGMENT_A_FUNC SCU_MODE_FUNC0
@@ -80,6 +92,7 @@ extern "C" {
 #define SEGMENT_A_BIT  0
 #define SEGMENT_A_MASK (1 << SEGMENT_A_BIT)
 
+/*! @brief Configuraciones de hardware para el Segmento B */
 #define SEGMENT_B_PORT 4
 #define SEGMENT_B_PIN  1
 #define SEGMENT_B_FUNC SCU_MODE_FUNC0
@@ -87,6 +100,7 @@ extern "C" {
 #define SEGMENT_B_BIT  1
 #define SEGMENT_B_MASK (1 << SEGMENT_B_BIT)
 
+/*! @brief Configuraciones de hardware para el Segmento C */
 #define SEGMENT_C_PORT 4
 #define SEGMENT_C_PIN  2
 #define SEGMENT_C_FUNC SCU_MODE_FUNC0
@@ -94,6 +108,7 @@ extern "C" {
 #define SEGMENT_C_BIT  2
 #define SEGMENT_C_MASK (1 << SEGMENT_C_BIT)
 
+/*! @brief Configuraciones de hardware para el Segmento D */
 #define SEGMENT_D_PORT 4
 #define SEGMENT_D_PIN  3
 #define SEGMENT_D_FUNC SCU_MODE_FUNC0
@@ -101,6 +116,7 @@ extern "C" {
 #define SEGMENT_D_BIT  3
 #define SEGMENT_D_MASK (1 << SEGMENT_D_BIT)
 
+/*! @brief Configuraciones de hardware para el Segmento E */
 #define SEGMENT_E_PORT 4
 #define SEGMENT_E_PIN  4
 #define SEGMENT_E_FUNC SCU_MODE_FUNC0
@@ -108,6 +124,7 @@ extern "C" {
 #define SEGMENT_E_BIT  4
 #define SEGMENT_E_MASK (1 << SEGMENT_E_BIT)
 
+/*! @brief Configuraciones de hardware para el Segmento F */
 #define SEGMENT_F_PORT 4
 #define SEGMENT_F_PIN  5
 #define SEGMENT_F_FUNC SCU_MODE_FUNC0
@@ -115,6 +132,7 @@ extern "C" {
 #define SEGMENT_F_BIT  5
 #define SEGMENT_F_MASK (1 << SEGMENT_F_BIT)
 
+/*! @brief Configuraciones de hardware para el Segmento G */
 #define SEGMENT_G_PORT 4
 #define SEGMENT_G_PIN  6
 #define SEGMENT_G_FUNC SCU_MODE_FUNC0
@@ -122,51 +140,60 @@ extern "C" {
 #define SEGMENT_G_BIT  6
 #define SEGMENT_G_MASK (1 << SEGMENT_G_BIT)
 
+/*! @brief Máscara global para controlar los 7 segmentos simultáneamente */
 #define SEGMENTS_MASK (SEGMENT_A_MASK | SEGMENT_B_MASK | SEGMENT_C_MASK | \
                        SEGMENT_D_MASK | SEGMENT_E_MASK | SEGMENT_F_MASK | SEGMENT_G_MASK)
 
+/*! @brief Configuraciones de hardware para el Segmento del Punto Decimal (DP) */
 #define SEGMENT_P_PORT 6
 #define SEGMENT_P_PIN  8
 #define SEGMENT_P_FUNC SCU_MODE_FUNC4
 #define SEGMENT_P_GPIO 5
 #define SEGMENT_P_BIT  16
 
+/*! @brief Configuraciones de hardware para la Tecla F1 del poncho */
 #define KEY_F1_PORT 4
 #define KEY_F1_PIN  8
 #define KEY_F1_FUNC SCU_MODE_FUNC4
 #define KEY_F1_GPIO 5
 #define KEY_F1_BIT  12
 
+/*! @brief Configuraciones de hardware para la Tecla F2 del poncho */
 #define KEY_F2_PORT 4
 #define KEY_F2_PIN  9
 #define KEY_F2_FUNC SCU_MODE_FUNC4
 #define KEY_F2_GPIO 5
 #define KEY_F2_BIT  13
 
+/*! @brief Configuraciones de hardware para la Tecla F3 del poncho */
 #define KEY_F3_PORT 4
 #define KEY_F3_PIN  10
 #define KEY_F3_FUNC SCU_MODE_FUNC4
 #define KEY_F3_GPIO 5
 #define KEY_F3_BIT  14
 
+/*! @brief Configuraciones de hardware para la Tecla F4 del poncho */
 #define KEY_F4_PORT 6
 #define KEY_F4_PIN  7
 #define KEY_F4_FUNC SCU_MODE_FUNC4
 #define KEY_F4_GPIO 5
 #define KEY_F4_BIT  15
 
+/*! @brief Configuraciones de hardware para la Tecla ACCEPT (Aceptar) del poncho */
 #define KEY_ACCEPT_PIN  2
 #define KEY_ACCEPT_PORT 3
 #define KEY_ACCEPT_FUNC SCU_MODE_FUNC4
 #define KEY_ACCEPT_GPIO 5
 #define KEY_ACCEPT_BIT  9
 
+/*! @brief Configuraciones de hardware para la Tecla CANCEL (Cancelar) del poncho */
 #define KEY_CANCEL_PORT 3
 #define KEY_CANCEL_PIN  1
 #define KEY_CANCEL_FUNC SCU_MODE_FUNC4
 #define KEY_CANCEL_GPIO 5
 #define KEY_CANCEL_BIT  8
 
+/*! @brief Configuraciones de hardware para el Zumbador (Buzzer) del poncho */
 #define BUZZER_PORT 2
 #define BUZZER_PIN  2
 #define BUZZER_FUNC SCU_MODE_FUNC4
@@ -178,6 +205,16 @@ extern "C" {
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
+
+/*!
+ * @brief Inicializa y configura el display multiplexado del Poncho.
+ * Configura internamente los pines de la EDU-CIAA asociados a los segmentos 
+ * y dígitos del display utilizando la interfaz definida en `screen.h`.
+ * Se encarga de inicializar tanto las salidas de control numérico como los 
+ * transistores de habilitación de cada dígito.
+ * * @return display_t Puntero al objeto controlador del display instanciado.
+ */
+display_t PonchoCreateDisplay(void);
 
 /* === End of conditional blocks =================================================================================== */
 

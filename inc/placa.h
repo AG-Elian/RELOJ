@@ -36,6 +36,7 @@ SPDX-License-Identifier: MIT
 /* === Headers files inclusions ==================================================================================== */
 
 #include "digital.h"
+#include "screen.h"
 
 /* === Header for C++ compatibility ================================================================================ */
 
@@ -82,7 +83,17 @@ typedef struct board_s {
     digital_input_t tecla_cambiar; 
     
     //! Asociada a TEC_4 de la placa.
-    digital_input_t tecla_probar; 
+    digital_input_t tecla_probar;
+
+    digital_input_t f1;
+    digital_input_t f2;
+    digital_input_t f3;
+    digital_input_t f4;
+    digital_input_t accept;
+    digital_input_t cancel;
+    digital_output_t buzzer;
+    display_t display;
+
 } const * const board_t;
 
 /* === Public variable declarations ================================================================================ */
