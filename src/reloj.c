@@ -1,6 +1,6 @@
 /*********************************************************************************************************************
 Copyright 2016-2025, Laboratorio de Microprocesadores
-Facultad de Ciencias Exactas y Tecnologia
+Facultad de Ciencias Exactas y Tecnología
 Universidad Nacional de Tucuman
 http://www.microprocesadores.unt.edu.ar/
 
@@ -26,41 +26,26 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 SPDX-License-Identifier: MIT
 *************************************************************************************************/
 
-#ifndef RELOJ_H_
-#define RELOJ_H_
-
-/** @file reloj.h
- ** @brief Definición de tipos y funciones para el manejo de un reloj
+/** @file reloj.c
+ ** @brief Implementación de funciones para el manejo de un reloj
  **/
 
-/* === Headers files inclusions ==================================================================================== */
+/* === Headers files inclusions ================================================================ */
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "reloj.h"
 
-/* === Header for C++ compatibility ================================================================================ */
+/* === Macros definitions ====================================================================== */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/* === Private data type declarations ========================================================== */
 
-/* === Public macros definitions =================================================================================== */
+/* === Private function declarations =========================================================== */
 
-/* === Public data type declarations =============================================================================== */
-typedef struct clock_s *clock_t;
-typedef uint8_t hora_t[6];
-/* === Public variable declarations ================================================================================ */
+/* === Private variable definitions ============================================================ */
 
-/* === Public function declarations ================================================================================ */
+/* === Public variable definition  ============================================================= */
 
-clock_t RelojCreate(unsigned int ticks_perseconds, void (*tick_callback)(void));
-bool RelojGetHora(clock_t reloj, hora_t hora_actual);
-bool RelojSetHora(clock_t reloj, hora_t hora_actual);
+/* === Private function definitions ============================================================ */
 
-/* === End of conditional blocks =================================================================================== */
+/* === Public function implementation ========================================================== */
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* RELOJ_H_ */
+/* === End of documentation ==================================================================== */
