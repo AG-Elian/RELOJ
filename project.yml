@@ -102,7 +102,7 @@
   :source:
     - src/**
   :include:
-    - src/** # In simple projects, this entry often duplicates :source
+    - inc/** #Esta es la carpeta que contiene los archivos .h, y se le indica a Ceedling que los busque ahí.
   :support:
     - test/support
   :libraries: []
