@@ -46,9 +46,19 @@ extern "C" {
 
 /* === Public macros definitions =================================================================================== */
 
+/* Índices del arreglo de la hora (formato BCD sin compactar) */
+#define HOUR_TENS   0  // Decenas de hora en la primera posición
+#define HOUR_ONES   1  // Unidades de hora
+#define MINUTE_TENS 2  // Decenas de minutos
+#define MINUTE_ONES 3  // Unidades de minutos
+#define SECOND_TENS 4  // Decenas de segundos
+#define SECOND_ONES 5  // Unidades de segundos en la última posición
+
 /* === Public data type declarations =============================================================================== */
+
 typedef struct clock_s *clock_t;
 typedef uint8_t hora_t[6];
+
 /* === Public variable declarations ================================================================================ */
 
 /* === Public function declarations ================================================================================ */
@@ -56,6 +66,7 @@ typedef uint8_t hora_t[6];
 clock_t RelojCreate(unsigned int ticks_perseconds, void (*tick_callback)(void));
 bool RelojGetHora(clock_t reloj, hora_t hora_actual);
 bool RelojSetHora(clock_t reloj, hora_t hora_actual);
+void RelojTick(clock_t reloj);
 
 /* === End of conditional blocks =================================================================================== */
 
