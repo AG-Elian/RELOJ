@@ -3,6 +3,8 @@
 
 #define TICKS_PER_SECOND 100
 #define ONE_SECOND       TICKS_PER_SECOND
+#define TEN_SECONDS      (10 * TICKS_PER_SECOND)
+#define HORA_INICIAL     45296 // Representa las 12:34:56
 
 //Función auxiliar para simular el avance de ticks en el reloj
 static void SimulateTicks(clock_t reloj, unsigned int ticks) {
@@ -61,6 +63,19 @@ void test_avanza_un_seg(void){
 
     reloj = RelojCreate(TICKS_PER_SECOND, NULL); // Creamos el reloj con la cantidad de ticks por segundo definida
     SimulateTicks(reloj, ONE_SECOND); // Simulamos el avance de ticks para que el reloj avance un segundo
+    RelojGetHora(reloj, hora_actual); // Obtenemos la hora actual del reloj
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); // Verificamos que la hora actual es la esperada
+}
+
+void test_avanza_diez_segundos(void){
+    clock_t reloj;
+    hora_t hora_actual;
+    static const hora_t EXPECTED_TIME = {1, 2, 3, 5, 0, 6}; // Esperamos que avance a 12:35:06
+
+    reloj = RelojCreate(TICKS_PER_SECOND, NULL); // Creamos el reloj con la cantidad de ticks por segundo definida
+    (void)RelojSetHora(reloj, HORA_INICIAL); // Ajustamos la hora inicial a 12:34:56
+    SimulateTicks(reloj, TEN_SECONDS); // Simulamos el avance de ticks para que el reloj avance diez segundos
     RelojGetHora(reloj, hora_actual); // Obtenemos la hora actual del reloj
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); // Verificamos que la hora actual es la esperada
