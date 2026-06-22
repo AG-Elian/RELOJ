@@ -4,7 +4,8 @@
 #define TICKS_PER_SECOND 100
 #define ONE_SECOND       TICKS_PER_SECOND
 #define TEN_SECONDS      (10 * TICKS_PER_SECOND)
-#define HORA_INICIAL     45296 // Representa las 12:34:56
+// Declaramos la hora inicial como un arreglo BCD, NO como un entero:
+static hora_t HORA_INICIAL = {1, 2, 3, 4, 5, 6};
 
 //Función auxiliar para simular el avance de ticks en el reloj
 static void SimulateTicks(clock_t reloj, unsigned int ticks) {
