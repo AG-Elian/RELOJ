@@ -68,6 +68,12 @@ bool RelojGetHora(clock_t reloj, hora_t hora_actual);
 bool RelojSetHora(clock_t reloj, hora_t hora_actual);
 void RelojTick(clock_t reloj);
 
+// --- Funciones de la Alarma ---
+void RelojSetAlarma(clock_t reloj, hora_t hora_alarma);
+bool RelojGetAlarma(clock_t reloj, hora_t hora_alarma);
+void RelojActivarAlarma(clock_t reloj, bool activar);
+bool RelojAlarmaEstaActiva(clock_t reloj);
+
 /* === End of conditional blocks =================================================================================== */
 
 #ifdef __cplusplus

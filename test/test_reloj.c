@@ -81,3 +81,20 @@ void test_avanza_diez_segundos(void){
 
     TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); // Verificamos que la hora actual es la esperada
 }
+
+void test_configurar_y_consultar_alarma(void) {
+    clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
+    hora_t hora_alarma_configurar = {1, 2, 3, 0, 0, 0}; // Alarma a las 12:30:00
+    hora_t hora_alarma_leida;
+
+    // 1. Configuramos la alarma
+    RelojSetAlarma(reloj, hora_alarma_configurar);
+
+    // 2. Comprobamos que podemos leerla correctamente
+    // Asumimos que GetAlarma devuelve true si hay una alarma configurada y false si no
+    TEST_ASSERT_TRUE(RelojGetAlarma(reloj, hora_alarma_leida));
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_alarma_configurar, hora_alarma_leida, 6);
+
+    // 3. Comprobamos que por defecto no está activa hasta que se lo indiquemos
+    TEST_ASSERT_FALSE(RelojAlarmaEstaActiva(reloj));
+}
