@@ -1,6 +1,16 @@
 #include "unity.h"
 #include "reloj.h"
 
+#define TICKS_PER_SECOND 100
+#define ONE_SECOND       TICKS_PER_SECOND
+
+//Función auxiliar para simular el avance de ticks en el reloj
+static void SimulateTicks(clock_t reloj, unsigned int ticks) {
+    for (unsigned int i = 0; i < ticks; ++i) {
+        RelojTick(reloj); // Llamamos a la función que simula un tick del reloj
+    }
+}
+
 void setUp(void) {
     // Esta función se ejecuta antes de cada test. 
     // Por ahora la dejamos vacía.
@@ -42,4 +52,16 @@ void test_ajustar_hora_valida(void) {
     
     // Verificamos que el arreglo interno guardó exactamente la hora que le pasamos
     TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_esperada, hora_actual, 6);
+}
+
+void test_avanza_un_seg(void){
+    clock_t reloj;
+    hora_t hora_actual;
+    static const hora_t EXPECTED_TIME = {0, 0, 0, 0, 0, 1}; // Esperamos que avance a 00:00:01
+
+    reloj = RelojCreate(TICKS_PER_SECOND, NULL); // Creamos el reloj con la cantidad de ticks por segundo definida
+    SimulateTicks(reloj, ONE_SECOND); // Simulamos el avance de ticks para que el reloj avance un segundo
+    RelojGetHora(reloj, hora_actual); // Obtenemos la hora actual del reloj
+
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); // Verificamos que la hora actual es la esperada
 }
