@@ -73,6 +73,7 @@ void RelojSetAlarma(clock_t reloj, hora_t hora_alarma);
 bool RelojGetAlarma(clock_t reloj, hora_t hora_alarma);
 void RelojActivarAlarma(clock_t reloj, bool activar);
 bool RelojAlarmaEstaActiva(clock_t reloj);
+void RelojPosponerAlarma(clock_t reloj, uint8_t minutos);
 
 /* === End of conditional blocks =================================================================================== */
 

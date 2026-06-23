@@ -177,3 +177,20 @@ void test_alarma_suena_en_la_hora_configurada(void) {
     SimulateTicks(reloj, ONE_SECOND);
     TEST_ASSERT_TRUE(alarma_sonando);
 }
+
+void test_posponer_alarma(void) {
+    clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
+    hora_t hora_alarma_inicial = {1, 2, 3, 0, 0, 0}; // Alarma original a las 12:30:00
+    hora_t hora_alarma_pospuesta = {1, 2, 3, 5, 0, 0}; // Esperamos que suene a las 12:35:00
+    hora_t hora_leida;
+
+    // Configuramos la alarma inicial
+    RelojSetAlarma(reloj, hora_alarma_inicial);
+
+    // Posponemos 5 minutos
+    RelojPosponerAlarma(reloj, 5);
+
+    // Leemos la nueva hora de la alarma y verificamos
+    RelojGetAlarma(reloj, hora_leida);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_alarma_pospuesta, hora_leida, 6);
+}
