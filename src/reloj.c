@@ -34,6 +34,7 @@ SPDX-License-Identifier: MIT
 
 
 #include "reloj.h"
+#include <stddef.h> // Para NULL
 
 /* === Macros definitions ====================================================================== */
 
@@ -51,7 +52,13 @@ struct clock_s {
     uint16_t ticks_persecond; // Ticks por segundo
     uint32_t current_time; // Tiempo actual en segundos
     bool valid_time; // Indica si la hora actual es válida
-    void *alarm_handler; // Puntero a la función de callback para la alarma (reservado para futuras implementaciones)
+
+            // --- Nuevos campos para la Alarma ---
+
+    uint32_t alarm_time;           // Guardaremos la hora de la alarma en segundos
+    bool alarm_enabled;            // Indica si la alarma está habilitada
+    void (*alarm_handler)(void);   // Puntero a función que se ejecutará cuando la alarma se active
+
 };
 
 /* === Private function declarations =========================================================== */
@@ -101,6 +108,7 @@ clock_t RelojCreate(unsigned int ticks_persecond, void (*alarm_handler)(void)){
     self->current_time = 0; // Inicializamos el tiempo actual en segundos
     self->valid_time = false; // La hora no es válida hasta que se configure
     self->alarm_handler = alarm_handler; // Guardamos el puntero al handler de la alarma (aunque no se use por ahora)
+    self->alarm_enabled = false; // Inicialmente la alarma está deshabilitada
 
     return self;
 }
@@ -131,6 +139,31 @@ void RelojTick(clock_t self) {
     if (self->current_time >= SECONDS_PER_DAY) {
         self->current_time = 0; // Reiniciamos el tiempo al llegar a un día completo
     }
+
+    // --- Lógica del Callback de la Alarma ---
+    // Si la alarma está activa, y la hora coincide, y además nos pasaron un puntero válido...
+    if (self->alarm_enabled && (self->current_time == self->alarm_time)) {
+        if (self->alarm_handler != NULL) { 
+            self->alarm_handler(); // ¡Disparamos el evento!
+        }
+    }
+}
+
+void RelojSetAlarma(clock_t self, hora_t hora_alarma) {
+    self->alarm_time = time_to_seconds(hora_alarma);
+}
+
+bool RelojGetAlarma(clock_t self, hora_t hora_alarma) {
+    seconds_to_time(self->alarm_time, hora_alarma);
+    return true; // Devolvemos true para indicar que la operación fue exitosa
+}
+
+void RelojActivarAlarma(clock_t self, bool activar) {
+    self->alarm_enabled = activar;
+}
+
+bool RelojAlarmaEstaActiva(clock_t self) {
+    return self->alarm_enabled;
 }
 
 /* === End of public function implementation ================================================== */

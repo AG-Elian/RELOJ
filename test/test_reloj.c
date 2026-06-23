@@ -1,3 +1,31 @@
+/*********************************************************************************************************************
+Copyright 2016-2025, Laboratorio de Microprocesadores
+Facultad de Ciencias Exactas y Tecnología
+Universidad Nacional de Tucuman
+http://www.microprocesadores.unt.edu.ar/
+
+Copyright (c) 2026, Elian Leandro Aramallo Guantay <aramallog.elian@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+SPDX-License-Identifier: MIT
+*************************************************************************************************/
+
 #include "unity.h"
 #include "reloj.h"
 
@@ -82,6 +110,25 @@ void test_avanza_diez_segundos(void){
     TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); // Verificamos que la hora actual es la esperada
 }
 
+void test_cambio_de_dia(void){
+    clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
+    hora_t hora_actual;
+    
+    // Configuramos la hora al límite del día (23:59:59)
+    hora_t hora_limite = {2, 3, 5, 9, 5, 9};
+    RelojSetHora(reloj, hora_limite);
+
+    // Esperamos que al pasar un segundo, el reloj vuelva a 00:00:00
+    hora_t hora_esperada = {0, 0, 0, 0, 0, 0}; 
+
+    // Simulamos el paso de un segundo exacto
+    SimulateTicks(reloj, ONE_SECOND);
+    RelojGetHora(reloj, hora_actual);
+
+    // Comprobamos
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_esperada, hora_actual, 6);
+}
+
 void test_configurar_y_consultar_alarma(void) {
     clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
     hora_t hora_alarma_configurar = {1, 2, 3, 0, 0, 0}; // Alarma a las 12:30:00
@@ -97,4 +144,36 @@ void test_configurar_y_consultar_alarma(void) {
 
     // 3. Comprobamos que por defecto no está activa hasta que se lo indiquemos
     TEST_ASSERT_FALSE(RelojAlarmaEstaActiva(reloj));
+}
+
+// Variable global exclusiva para el test de la alarma, para simular que la alarma ha sonado
+static bool alarma_sonando = false;
+
+// Esta es la función callback que le pasaremos a RelojCreate
+void simular_evento_alarma(void) {
+    alarma_sonando = true;
+}
+
+void test_alarma_suena_en_la_hora_configurada(void) {
+    // 1. Preparar
+    // Le entregamos nuestra función simulada al reloj
+    clock_t reloj = RelojCreate(TICKS_PER_SECOND, simular_evento_alarma);
+    
+    hora_t hora_actual = {1, 2, 3, 4, 5, 0}; // 12:34:50
+    hora_t hora_alarma = {1, 2, 3, 4, 5, 2}; // 12:34:52
+    
+    RelojSetHora(reloj, hora_actual);
+    RelojSetAlarma(reloj, hora_alarma);
+    RelojActivarAlarma(reloj, true); // Activamos la alarma
+    
+    alarma_sonando = false; // Nos aseguramos de que empiece en false
+
+    // 2. Ejecutar y Comprobar
+    // Simulamos 1 segundo. Ahora son 12:34:51. La alarma NO DEBE sonar
+    SimulateTicks(reloj, ONE_SECOND);
+    TEST_ASSERT_FALSE(alarma_sonando);
+    
+    // Simulamos otro segundo. Ahora son 12:34:52. La alarma DEBE sonar
+    SimulateTicks(reloj, ONE_SECOND);
+    TEST_ASSERT_TRUE(alarma_sonando);
 }
