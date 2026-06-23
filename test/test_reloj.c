@@ -26,31 +26,87 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 SPDX-License-Identifier: MIT
 *************************************************************************************************/
 
+/*! 
+ * @file test_reloj.c
+ * @brief Pruebas unitarias para la biblioteca del reloj y alarma (TDD).
+ * * Este archivo contiene la suite de pruebas escrita con Unity/Ceedling 
+ * para verificar los requerimientos funcionales del reloj y despertador.
+ */
+
 #include "unity.h"
 #include "reloj.h"
 
+/* === Macros definitions ====================================================================== */
+
+//! Cantidad de ticks que componen un segundo real según la configuración del hardware.
 #define TICKS_PER_SECOND 100
+
+//! Constante semántica para simular el paso de exactamente un segundo.
 #define ONE_SECOND       TICKS_PER_SECOND
+
+//! Constante semántica para simular el paso de diez segundos.
 #define TEN_SECONDS      (10 * TICKS_PER_SECOND)
-// Declaramos la hora inicial como un arreglo BCD, NO como un entero:
+
+/* === Private variable definitions ============================================================ */
+
+/*! 
+ * @brief Hora inicial por defecto para las pruebas (12:34:56).
+ * Representada como un arreglo BCD sin compactar.
+ */
 static hora_t HORA_INICIAL = {1, 2, 3, 4, 5, 6};
 
-//Función auxiliar para simular el avance de ticks en el reloj
+/*!
+ * @brief Variable global exclusiva para el test de la alarma.
+ * Bandera (flag) que permite verificar si la función de callback fue ejecutada.
+ */
+static bool alarma_sonando = false;
+
+/* === Private function implementations ============================================================ */
+
+/*!
+ * @brief Función auxiliar para simular el paso del tiempo en el reloj.
+ * @param[in] reloj Puntero al objeto reloj al que se le simularán los ticks.
+ * @param[in] ticks Cantidad de iteraciones (ticks) a simular.
+ */
 static void SimulateTicks(clock_t reloj, unsigned int ticks) {
     for (unsigned int i = 0; i < ticks; ++i) {
         RelojTick(reloj); // Llamamos a la función que simula un tick del reloj
     }
 }
 
+/*!
+ * @brief Función de callback simulada para los eventos de la alarma.
+ * Cuando el reloj alcanza la hora de la alarma, ejecuta esta función
+ * cambiando el estado de la variable global `alarma_sonando` a verdadero.
+ */
+void simular_evento_alarma(void) {
+    alarma_sonando = true;
+}
+
+/* === Unity framework functions =============================================================== */
+
+/*!
+ * @brief Función de configuración inicial ejecutada antes de cada test.
+ */
 void setUp(void) {
     // Esta función se ejecuta antes de cada test. 
     // Por ahora la dejamos vacía.
 }
 
+/*!
+ * @brief Función de limpieza ejecutada después de cada test.
+ */
 void tearDown(void) {
     // Esta función se ejecuta después de cada test.
 }
 
+/* === Test implementations ==================================================================== */
+
+/*!
+ * @brief Prueba: Inicialización del reloj.
+ * Verifica que al crear el reloj, la hora se inicializa en 00:00:00 y
+ * su estado se reporta como inválido hasta que sea ajustado por primera vez.
+ */
 void test_reloj_inicia_en_cero_y_estado_invalido(void) {
     // 1. Preparar: Definimos los datos que esperamos y las variables a usar
     hora_t hora_esperada = {0, 0, 0, 0, 0, 0};
@@ -67,6 +123,11 @@ void test_reloj_inicia_en_cero_y_estado_invalido(void) {
     TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_esperada, hora_actual, 6);
 }
 
+/*!
+ * @brief Prueba: Ajuste de hora.
+ * Verifica que al ajustar el reloj con una hora específica, ésta se guarda
+ * correctamente y el estado del reloj pasa a ser válido.
+ */
 void test_ajustar_hora_valida(void) {
     // 1. Preparar
     hora_t hora_esperada = {1, 2, 3, 4, 5, 6}; // Representa las 12:34:56
@@ -85,6 +146,11 @@ void test_ajustar_hora_valida(void) {
     TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_esperada, hora_actual, 6);
 }
 
+/*!
+ * @brief Prueba: Avance de un segundo.
+ * Verifica que el reloj incremente su hora en exactamente un segundo
+ * tras recibir la cantidad de ticks correspondientes a la frecuencia configurada.
+ */
 void test_avanza_un_seg(void){
     clock_t reloj;
     hora_t hora_actual;
@@ -97,6 +163,11 @@ void test_avanza_un_seg(void){
     TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); // Verificamos que la hora actual es la esperada
 }
 
+/*!
+ * @brief Prueba: Avance de múltiples segundos.
+ * Verifica que la lógica temporal sume correctamente intervalos mayores
+ * (10 segundos) partiendo desde una hora preconfigurada.
+ */
 void test_avanza_diez_segundos(void){
     clock_t reloj;
     hora_t hora_actual;
@@ -110,6 +181,11 @@ void test_avanza_diez_segundos(void){
     TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); // Verificamos que la hora actual es la esperada
 }
 
+/*!
+ * @brief Prueba: Cambio de día (Límite matemático).
+ * Verifica que al alcanzar las 23:59:59 y sumar un segundo adicional,
+ * el reloj reinicie su contador correctamente a 00:00:00.
+ */
 void test_cambio_de_dia(void){
     clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
     hora_t hora_actual;
@@ -129,6 +205,11 @@ void test_cambio_de_dia(void){
     TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_esperada, hora_actual, 6);
 }
 
+/*!
+ * @brief Prueba: Configuración y lectura de alarma.
+ * Verifica que sea posible almacenar una hora de alarma, leer ese mismo dato,
+ * y que por defecto el sistema la mantenga inactiva.
+ */
 void test_configurar_y_consultar_alarma(void) {
     clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
     hora_t hora_alarma_configurar = {1, 2, 3, 0, 0, 0}; // Alarma a las 12:30:00
@@ -146,14 +227,11 @@ void test_configurar_y_consultar_alarma(void) {
     TEST_ASSERT_FALSE(RelojAlarmaEstaActiva(reloj));
 }
 
-// Variable global exclusiva para el test de la alarma, para simular que la alarma ha sonado
-static bool alarma_sonando = false;
-
-// Esta es la función callback que le pasaremos a RelojCreate
-void simular_evento_alarma(void) {
-    alarma_sonando = true;
-}
-
+/*!
+ * @brief Prueba: Disparo del evento de alarma.
+ * Verifica que cuando la hora del reloj coincida exactamente con la hora
+ * de la alarma configurada y activada, se ejecute la función callback provista.
+ */
 void test_alarma_suena_en_la_hora_configurada(void) {
     // 1. Preparar
     // Le entregamos nuestra función simulada al reloj
@@ -178,6 +256,11 @@ void test_alarma_suena_en_la_hora_configurada(void) {
     TEST_ASSERT_TRUE(alarma_sonando);
 }
 
+/*!
+ * @brief Prueba: Posponer alarma (Snooze).
+ * Verifica que la función para posponer la alarma sume correctamente
+ * una cantidad arbitraria de minutos a la hora actual de la alarma.
+ */
 void test_posponer_alarma(void) {
     clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
     hora_t hora_alarma_inicial = {1, 2, 3, 0, 0, 0}; // Alarma original a las 12:30:00
