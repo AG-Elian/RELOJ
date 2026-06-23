@@ -59,7 +59,7 @@ static hora_t HORA_INICIAL = {1, 2, 3, 4, 5, 6};
  * @brief Variable global exclusiva para el test de la alarma.
  * Bandera (flag) que permite verificar si la función de callback fue ejecutada.
  */
-static bool alarma_sonando = false;
+static bool alarma_sonando;
 
 /* === Private function implementations ============================================================ */
 
@@ -87,17 +87,17 @@ void simular_evento_alarma(void) {
 
 /*!
  * @brief Función de configuración inicial ejecutada antes de cada test.
+ * Garantiza un entorno limpio y aislado reiniciando banderas globales.
  */
 void setUp(void) {
-    // Esta función se ejecuta antes de cada test. 
-    // Por ahora la dejamos vacía.
+    alarma_sonando = false; 
 }
 
 /*!
  * @brief Función de limpieza ejecutada después de cada test.
  */
 void tearDown(void) {
-    // Esta función se ejecuta después de cada test.
+    // Por ahora la dejamos vacía.
 }
 
 /* === Test implementations ==================================================================== */
@@ -113,7 +113,7 @@ void test_reloj_inicia_en_cero_y_estado_invalido(void) {
     hora_t hora_actual = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; // Lleno de basura para asegurar que la función lo sobreescribe
     
     // Creamos el reloj (pasamos 100 ticks y NULL para el callback por ahora)
-    clock_t reloj = RelojCreate(100, NULL);
+    clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
     
     // 2. Ejecutar y 3. Comprobar:
     // Verificamos que GetHora devuelve false (hora inválida)
@@ -132,7 +132,7 @@ void test_ajustar_hora_valida(void) {
     // 1. Preparar
     hora_t hora_esperada = {1, 2, 3, 4, 5, 6}; // Representa las 12:34:56
     hora_t hora_actual;
-    clock_t reloj = RelojCreate(100, NULL);
+    clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
     
     // 2. Ejecutar
     // Ajustamos la hora usando la función de nuestra API
@@ -156,11 +156,11 @@ void test_avanza_un_seg(void){
     hora_t hora_actual;
     static const hora_t EXPECTED_TIME = {0, 0, 0, 0, 0, 1}; // Esperamos que avance a 00:00:01
 
-    reloj = RelojCreate(TICKS_PER_SECOND, NULL); // Creamos el reloj con la cantidad de ticks por segundo definida
-    SimulateTicks(reloj, ONE_SECOND); // Simulamos el avance de ticks para que el reloj avance un segundo
-    RelojGetHora(reloj, hora_actual); // Obtenemos la hora actual del reloj
+    reloj = RelojCreate(TICKS_PER_SECOND, NULL); 
+    SimulateTicks(reloj, ONE_SECOND); 
+    RelojGetHora(reloj, hora_actual); 
 
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); // Verificamos que la hora actual es la esperada
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); 
 }
 
 /*!
@@ -173,12 +173,12 @@ void test_avanza_diez_segundos(void){
     hora_t hora_actual;
     static const hora_t EXPECTED_TIME = {1, 2, 3, 5, 0, 6}; // Esperamos que avance a 12:35:06
 
-    reloj = RelojCreate(TICKS_PER_SECOND, NULL); // Creamos el reloj con la cantidad de ticks por segundo definida
-    (void)RelojSetHora(reloj, HORA_INICIAL); // Ajustamos la hora inicial a 12:34:56
-    SimulateTicks(reloj, TEN_SECONDS); // Simulamos el avance de ticks para que el reloj avance diez segundos
-    RelojGetHora(reloj, hora_actual); // Obtenemos la hora actual del reloj
+    reloj = RelojCreate(TICKS_PER_SECOND, NULL); 
+    RelojSetHora(reloj, HORA_INICIAL); 
+    SimulateTicks(reloj, TEN_SECONDS); 
+    RelojGetHora(reloj, hora_actual); 
 
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); // Verificamos que la hora actual es la esperada
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(EXPECTED_TIME, hora_actual, 6); 
 }
 
 /*!
@@ -219,7 +219,6 @@ void test_configurar_y_consultar_alarma(void) {
     RelojSetAlarma(reloj, hora_alarma_configurar);
 
     // 2. Comprobamos que podemos leerla correctamente
-    // Asumimos que GetAlarma devuelve true si hay una alarma configurada y false si no
     TEST_ASSERT_TRUE(RelojGetAlarma(reloj, hora_alarma_leida));
     TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_alarma_configurar, hora_alarma_leida, 6);
 
@@ -243,8 +242,6 @@ void test_alarma_suena_en_la_hora_configurada(void) {
     RelojSetHora(reloj, hora_actual);
     RelojSetAlarma(reloj, hora_alarma);
     RelojActivarAlarma(reloj, true); // Activamos la alarma
-    
-    alarma_sonando = false; // Nos aseguramos de que empiece en false
 
     // 2. Ejecutar y Comprobar
     // Simulamos 1 segundo. Ahora son 12:34:51. La alarma NO DEBE sonar
