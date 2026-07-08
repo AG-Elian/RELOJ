@@ -37,12 +37,6 @@ SPDX-License-Identifier: MIT
 #include "poncho.h"  
 #include "screen.h"  
 
-/*=== Global variables definition ============================================================= */
-
-display_t display_global; // Puntero a la estructura de la pantalla de 7 segmentos
-clock_t reloj; // Puntero a la estructura del reloj, que gestiona el tiempo y los ticks
-volatile uint32_t contador_ms = 0; // Contador de milisegundos, incrementado en el SysTick_Handler
-
 /*=== Private data type declarations ========================================================== */
 
 typedef enum {
@@ -54,6 +48,17 @@ typedef enum {
     MODO_HORAS_ALARMA
 } modo_t;
 
+/* === Private variables definitions ========================================================= */
+
+display_t display_global; // Puntero a la estructura de la pantalla de 7 segmentos
+
+clock_t reloj; // Puntero a la estructura del reloj, que gestiona el tiempo y los ticks
+volatile uint32_t contador_ms = 0; // Contador de milisegundos, incrementado en el SysTick_Handler
+static modo_t modo; 
+
+static const uint8_t LIMITE_MINUTOS = { 5, 9 }; // Límite de minutos en formato BCD (59)
+static const uint8_t LIMITE_HORAS = { 2, 3 };   // Límite de horas en formato BCD (23)
+
 /* === Private function declarations =========================================================== */
 
 // static void Delay(void);
@@ -62,13 +67,74 @@ typedef enum {
 
 // Esta función interrumpe while(1) cada 1 milisegundo exacto
 void SysTick_Handler(void) {
-    // Refrescamos el display (imprescindible para que se vean los números)
     DisplayRefresh(display_global);
-    // Le avisamos al reloj que pasó 1 milisegundo
     RelojTick(reloj);
-    contador_ms++; // Incrementamos el contador de milisegundos
+    contador_ms++;
 }
 
+void CambiarModo(modo_t valor) {
+    modo=valor;
+
+    switch (modo)
+    {
+    case MODO_SIN_AJUSTAR:
+        DisplayFlashDigits(display_global, 0, 3, 250);
+        break;
+    
+    case MODO_NORMAL:
+        DisplayFlashDigits(display_global, 0, 0, 0);
+        break;
+
+    case MODO_MINUTOS:
+        DisplayFlashDigits(display_global, 2, 3, 250);
+        break;
+
+    case MODO_HORAS:
+        DisplayFlashDigits(display_global, 0, 1, 250);
+        break;
+
+    case MODO_MINUTOS_ALARMA:
+        DisplayFlashDigits(display_global, 2, 3, 250);
+        break;
+
+    case MODO_HORAS_ALARMA:
+        DisplayFlashDigits(display_global, 0, 1, 250);
+        break;
+
+    default:
+        break;
+    }
+}
+
+void SonarAlarma(clock_t reloj) {
+    // Aquí iría la lógica para hacer sonar el buzzer cuando la alarma se active
+}
+
+void IncrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
+    numero[1]++; // Incrementamos el dígito de las unidades
+    if (numero[1] > 9) {
+        numero[1] = 0; // Reiniciamos las unidades a 0
+        numero[0]++; // Incrementamos el dígito de las decenas
+        if (numero[0] > limite[0] || (numero[0] == limite[0] && numero[1] > limite[1])) {
+            numero[0] = 0; // Reiniciamos las decenas a 0 si se supera el límite
+        }
+    }
+}
+
+void DecrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
+    if (numero[1] == 0) {
+        if (numero[0] == 0) {
+            // Si ambos dígitos son 0, reiniciamos al límite
+            numero[0] = limite[0];
+            numero[1] = limite[1];
+        } else {
+            numero[0]--; // Decrementamos las decenas
+            numero[1] = 9; // Reiniciamos las unidades a 9
+        }
+    } else {
+        numero[1]--; // Decrementamos las unidades
+    }
+}
 /* === Public function implementation ========================================================== */
 
 /*! 
@@ -84,14 +150,16 @@ void SysTick_Handler(void) {
  */
 
 int main(void) {
+
+    uint8_t entrada[4] = {0, 0, 0, 0}; // Arreglo para almacenar la hora a mostrar en el display
+
     // INICIALIZACIÓN DE HARDWARE
     board_t placa = BoardCreate();
     display_global = placa->display; // Guardamos el puntero a la pantalla para usarlo en el SysTick_Handler
-    reloj = RelojCreate(1000, NULL); // Configura el reloj para que genere un tick cada 1 ms
+    reloj = RelojCreate(1000, SonarAlarma); // Configura el reloj para que genere un tick cada 1 ms
     SysTick_Config(SystemCoreClock / 1000); // Configura el SysTick para que salte 1000 veces por segundo (cada 1 ms)
 
     // VARIABLES DE CONTROL DE LA APLICACIÓN
-    modo_t estado_reloj = MODO_NORMAL; // Estado inicial del reloj
     hora_t hora_actual; // Arreglo para almacenar la hora actual (4 dígitos: HHMM)
     uint32_t tiempo_inicio_f1 = 0;     // Para medir los 3 segundos de F1
 
@@ -99,10 +167,10 @@ int main(void) {
     RelojSetHora(reloj, hora_inicial);
 
     // Bucle principal de la aplicación. (Super Loop)
-    while(1){
+    while(true){
 
         // MAQUINA DE ESTADOS DEL RELOJ
-        switch(estado_reloj) {
+        switch(modo) {
 
             case MODO_SIN_AJUSTAR:
                 // Aquí iría la lógica para el modo sin ajustar
@@ -116,8 +184,9 @@ int main(void) {
                 if (DigitalInputRead(placa->f1)) {
                     // La tecla ESTÁ siendo presionada, calculo cuánto tiempo pasó
                     if ((contador_ms - tiempo_inicio_f1) >= 3000) {
-                        // ¡Pasaron 3 segundos! Cambiamos de estado
-                        estado_reloj = MODO_MINUTOS;
+
+                        CambiarModo(MODO_MINUTOS);
+
                     }
                 } else {
                     // La tecla NO está presionada. 
@@ -126,9 +195,31 @@ int main(void) {
                 }    
                 break;
             case MODO_MINUTOS:
-                // Mostramos el arreglo [1, 1, 1, 1] para saber si el salto funcionó
-                hora_actual[0] = 1; hora_actual[1] = 1; hora_actual[2] = 1; hora_actual[3] = 1;
+                // En este modo, seguimos mostrando la copia "hora_actual", 
+                // pero la pantalla se encargará de hacerla parpadear automáticamente.
                 DisplayWriteBCD(placa->display, hora_actual, 4);
+
+                // Evaluar si se presiona la tecla CANCELAR para abortar y salir
+                if (DigitalInputHasActivated(placa->cancel)) {
+                    CambiarModo(MODO_MINUTOS);
+                }
+                
+                // Evaluar si se presiona la tecla ACEPTAR para avanzar a modificar las horas
+                if (DigitalInputHasActivated(placa->accept)) {
+                    CambiarModo(MODO_HORAS);
+                }
+
+                // Evaluar incremento de minutos con F4
+                if (DigitalInputHasActivated(placa->f4)) {
+                    // Lógica para sumar 1 minuto
+                    IncrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
+                }
+
+                // Evaluar decremento de minutos con F3
+                if (DigitalInputHasActivated(placa->f3)) {
+                    // Lógica para restar 1 minuto
+                    DecrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
+                }
                 break;
             case MODO_HORAS:
                 // Aquí iría la lógica para ajustar horas
