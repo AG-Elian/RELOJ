@@ -56,8 +56,8 @@ clock_t reloj; // Puntero a la estructura del reloj, que gestiona el tiempo y lo
 volatile uint32_t contador_ms = 0; // Contador de milisegundos, incrementado en el SysTick_Handler
 static modo_t modo; 
 
-static const uint8_t LIMITE_MINUTOS = { 5, 9 }; // Límite de minutos en formato BCD (59)
-static const uint8_t LIMITE_HORAS = { 2, 3 };   // Límite de horas en formato BCD (23)
+static const uint8_t LIMITE_MINUTOS[2] = { 5, 9 }; // Límite de minutos en formato BCD (59)
+static const uint8_t LIMITE_HORAS[2] = { 2, 3 };   // Límite de horas en formato BCD (23)
 
 /* === Private function declarations =========================================================== */
 
@@ -106,7 +106,7 @@ void CambiarModo(modo_t valor) {
     }
 }
 
-void SonarAlarma(clock_t reloj) {
+void SonarAlarma(void) {
     // Aquí iría la lógica para hacer sonar el buzzer cuando la alarma se active
 }
 
@@ -151,7 +151,7 @@ void DecrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
 
 int main(void) {
 
-    uint8_t entrada[4] = {0, 0, 0, 0}; // Arreglo para almacenar la hora a mostrar en el display
+    uint8_t entrada[4] = {0, 0, 0, 0}; 
 
     // INICIALIZACIÓN DE HARDWARE
     board_t placa = BoardCreate();
@@ -160,11 +160,14 @@ int main(void) {
     SysTick_Config(SystemCoreClock / 1000); // Configura el SysTick para que salte 1000 veces por segundo (cada 1 ms)
 
     // VARIABLES DE CONTROL DE LA APLICACIÓN
-    hora_t hora_actual; // Arreglo para almacenar la hora actual (4 dígitos: HHMM)
+    hora_t hora_actual; // Arreglo para almacenar la hora actual (4 dígitos: HHMM) "borrador"
     uint32_t tiempo_inicio_f1 = 0;     // Para medir los 3 segundos de F1
 
     hora_t hora_inicial = {1, 2, 0, 0, 0, 0}; 
     RelojSetHora(reloj, hora_inicial);
+
+    //FUERZO EL ESTADO INICIAL DEL RELOJ A MODO_NORMAL
+    CambiarModo(MODO_NORMAL);
 
     // Bucle principal de la aplicación. (Super Loop)
     while(true){
@@ -176,53 +179,83 @@ int main(void) {
                 // Aquí iría la lógica para el modo sin ajustar
                 break;
             case MODO_NORMAL:
-                // A. Tarea principal del estado: Mostrar la hora
+                // A. Mostrar la hora actual provista por el reloj
                 RelojGetHora(reloj, hora_actual); 
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // B. Evaluar transiciones: F1 presionada por 3 segundos para pasar a MODO_MINUTOS
+                // B. Evaluar transiciones
+                // Entrar a configurar hora (mantener F1 por 3 segundos)
                 if (DigitalInputRead(placa->f1)) {
-                    // La tecla ESTÁ siendo presionada, calculo cuánto tiempo pasó
                     if ((contador_ms - tiempo_inicio_f1) >= 3000) {
-
-                        CambiarModo(MODO_MINUTOS);
-
+                        CambiarModo(MODO_MINUTOS); // Usa tu función centralizada
                     }
                 } else {
-                    // La tecla NO está presionada. 
-                    // Anclamos el tiempo de inicio al tiempo actual continuamente.
-                    tiempo_inicio_f1 = contador_ms; 
+                    tiempo_inicio_f1 = contador_ms; // Ancla el tiempo si no está presionada
                 }    
+                
+                // C. Activar/Desactivar alarma con Accept y Cancel en modo normal
+                if (DigitalInputHasActivated(placa->accept)) {
+                    RelojActivarAlarma(reloj, true);
+                }
+                if (DigitalInputHasActivated(placa->cancel)) {
+                    RelojActivarAlarma(reloj, false);
+                }
                 break;
+
+
             case MODO_MINUTOS:
-                // En este modo, seguimos mostrando la copia "hora_actual", 
-                // pero la pantalla se encargará de hacerla parpadear automáticamente.
+                // En este modo la pantalla parpadea sola gracias a CambiarModo(),
+                // solo necesitamos actualizar constantemente el valor en la pantalla
+                // con nuestra copia "borrador" local (hora_actual).
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // Evaluar si se presiona la tecla CANCELAR para abortar y salir
+                // 1. Evaluar cancelación (abortar ajustes y volver)
                 if (DigitalInputHasActivated(placa->cancel)) {
-                    CambiarModo(MODO_MINUTOS);
+                    CambiarModo(MODO_NORMAL);
                 }
                 
-                // Evaluar si se presiona la tecla ACEPTAR para avanzar a modificar las horas
+                // 2. Evaluar confirmación (Aceptar minutos, pasar a configurar horas)
                 if (DigitalInputHasActivated(placa->accept)) {
                     CambiarModo(MODO_HORAS);
                 }
 
-                // Evaluar incremento de minutos con F4
+                // 3. Aumentar minutos (F4)
                 if (DigitalInputHasActivated(placa->f4)) {
-                    // Lógica para sumar 1 minuto
+                    // Pasamos el puntero a la parte de los minutos (índice 2)
                     IncrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
                 }
 
-                // Evaluar decremento de minutos con F3
+                // 4. Disminuir minutos (F3)
                 if (DigitalInputHasActivated(placa->f3)) {
-                    // Lógica para restar 1 minuto
                     DecrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
                 }
                 break;
             case MODO_HORAS:
-                // Aquí iría la lógica para ajustar horas
+                // En este modo, CambiarModo() ya configuró que parpadeen los primeros 2 dígitos
+                DisplayWriteBCD(placa->display, hora_actual, 4);
+
+                // Evaluar cancelación (abortar ajustes y volver a MODO_NORMAL)
+                if (DigitalInputHasActivated(placa->cancel)) {
+                    CambiarModo(MODO_NORMAL);
+                }
+                
+                // Evaluar confirmación (Aceptar horas y volver a MODO_NORMAL)
+                if (DigitalInputHasActivated(placa->accept)) {
+                    // Aquí se usa la función del reloj para actualizar la hora con los valores ajustados
+                    RelojSetHora(reloj, hora_actual);
+                    CambiarModo(MODO_NORMAL);
+                }
+
+                // Aumentar horas (F4)
+                if (DigitalInputHasActivated(placa->f4)) {
+                    // Pasamos el puntero al inicio del arreglo (índice 0, decenas de hora)
+                    IncrementarBCD(&hora_actual[0], LIMITE_HORAS);
+                }
+
+                // Disminuir horas (F3)
+                if (DigitalInputHasActivated(placa->f3)) {
+                    DecrementarBCD(&hora_actual[0], LIMITE_HORAS);
+                }
                 break;
             case MODO_MINUTOS_ALARMA:
                 // Aquí iría la lógica para ajustar minutos de alarma
