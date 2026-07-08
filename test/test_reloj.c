@@ -255,22 +255,38 @@ void test_alarma_suena_en_la_hora_configurada(void) {
 
 /*!
  * @brief Prueba: Posponer alarma (Snooze).
- * Verifica que la función para posponer la alarma sume correctamente
- * una cantidad arbitraria de minutos a la hora actual de la alarma.
+ * Verifica que al posponer, la hora original de la alarma no se modifique,
+ * pero que el evento vuelva a dispararse una vez transcurrido el tiempo indicado.
  */
-void test_posponer_alarma(void) {
-    clock_t reloj = RelojCreate(TICKS_PER_SECOND, NULL);
-    hora_t hora_alarma_inicial = {1, 2, 3, 0, 0, 0}; // Alarma original a las 12:30:00
-    hora_t hora_alarma_pospuesta = {1, 2, 3, 5, 0, 0}; // Esperamos que suene a las 12:35:00
+void test_posponer_alarma_no_modifica_configuracion_y_vuelve_a_sonar(void) {
+    // 1. Preparar
+    clock_t reloj = RelojCreate(TICKS_PER_SECOND, simular_evento_alarma);
+    
+    hora_t hora_alarma = {1, 2, 3, 0, 0, 0}; // Alarma a las 12:30:00
+    hora_t hora_actual = {1, 2, 2, 9, 5, 9}; // Reloj a las 12:29:59
     hora_t hora_leida;
 
-    // Configuramos la alarma inicial
-    RelojSetAlarma(reloj, hora_alarma_inicial);
+    RelojSetHora(reloj, hora_actual);
+    RelojSetAlarma(reloj, hora_alarma);
+    RelojActivarAlarma(reloj, true);
 
-    // Posponemos 5 minutos
+    // Hacemos que suene por primera vez a las 12:30:00
+    SimulateTicks(reloj, ONE_SECOND);
+    TEST_ASSERT_TRUE(alarma_sonando);
+
+    // 2. Ejecutar (Posponemos 5 minutos)
+    alarma_sonando = false; // Reseteamos la bandera de la prueba
     RelojPosponerAlarma(reloj, 5);
 
-    // Leemos la nueva hora de la alarma y verificamos
+    // 3. Comprobar que la configuración original NO cambió
     RelojGetAlarma(reloj, hora_leida);
-    TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_alarma_pospuesta, hora_leida, 6);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(hora_alarma, hora_leida, 6);
+
+    // 4. Comprobar que NO suena antes de tiempo (avanzamos 4 min y 59 seg)
+    SimulateTicks(reloj, (5 * 60 * ONE_SECOND) - ONE_SECOND); 
+    TEST_ASSERT_FALSE(alarma_sonando);
+
+    // 5. Comprobar que SI suena exactamente a los 5 minutos (12:35:00)
+    SimulateTicks(reloj, ONE_SECOND);
+    TEST_ASSERT_TRUE(alarma_sonando);
 }

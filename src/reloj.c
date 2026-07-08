@@ -57,6 +57,9 @@ struct clock_s {
     uint32_t alarm_time;           //!< Hora programada para la alarma expresada en segundos
     bool alarm_enabled;            //!< Estado de habilitación de la alarma
     void (*alarm_handler)(void);   //!< Función callback que se ejecuta al dispararse la alarma
+
+    bool is_snoozed;               //!< Indica si la alarma fue pospuesta
+    uint32_t snooze_target;        //!< Hora temporal a la que debe volver a sonar
 };
 
 /* === Private function declarations =========================================================== */
@@ -122,6 +125,9 @@ clock_t RelojCreate(unsigned int ticks_persecond, void (*alarm_handler)(void)) {
     self->alarm_handler = alarm_handler;
     self->alarm_enabled = false;
 
+    self->is_snoozed = false;
+    self->snooze_target = 0;
+
     return self;
 }
 
@@ -171,6 +177,19 @@ void RelojTick(clock_t self) {
             self->alarm_handler();
         }
     }
+    if (self->alarm_enabled) {
+        // Suena si coincide con la alarma original, o si está pospuesta y coincide con el objetivo
+        if ((self->current_time == self->alarm_time) || 
+            (self->is_snoozed && self->current_time == self->snooze_target)) {
+            
+            if (self->alarm_handler != NULL) { 
+                self->alarm_handler(); 
+            }
+            
+            // Si sonó por un snooze, lo desactivamos para que no suene todos los días a esta hora
+            self->is_snoozed = false; 
+        }
+    }
 }
 
 /*!
@@ -217,11 +236,15 @@ bool RelojAlarmaEstaActiva(clock_t self) {
  * @param[in] minutos Cantidad de minutos a posponer.
  */
 void RelojPosponerAlarma(clock_t self, uint8_t minutos) {
-    self->alarm_time += (minutos * SECONDS_PER_MINUTE);
+    // Calculamos el objetivo a partir de la hora ACTUAL
+    self->snooze_target = self->current_time + (minutos * SECONDS_PER_MINUTE);
     
-    if (self->alarm_time >= SECONDS_PER_DAY) {
-        self->alarm_time %= SECONDS_PER_DAY;
+    // Evitamos el desbordamiento de día
+    if (self->snooze_target >= SECONDS_PER_DAY) {
+        self->snooze_target %= SECONDS_PER_DAY;
     }
+    
+    self->is_snoozed = true; // Activamos el estado de alarma pospuesta
 }
 
 /* === End of public function implementation ================================================== */
