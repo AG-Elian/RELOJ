@@ -33,8 +33,25 @@ SPDX-License-Identifier: MIT
 
 #include "digital.h"
 #include "placa.h"
+#include "reloj.h"
 #include "poncho.h"  
 #include "screen.h"  
+
+/*=== Global variables definition ============================================================= */
+
+display_t display_global; // Puntero a la estructura de la pantalla de 7 segmentos
+clock_t reloj; // Puntero a la estructura del reloj, que gestiona el tiempo y los ticks
+
+/*=== Private data type declarations ========================================================== */
+
+typedef enum {
+    MODO_SIN_AJUSTAR,
+    MODO_NORMAL,
+    MODO_MINUTOS,
+    MODO_HORAS,
+    MODO_MINUTOS_ALARMA,
+    MODO_HORAS_ALARMA
+} modo_t;
 
 /* === Private function declarations =========================================================== */
 
@@ -54,6 +71,14 @@ static void Delay(void) {
     }
 }
 
+// Esta función interrumpe while(1) cada 1 milisegundo exacto
+void SysTick_Handler(void) {
+    // Refrescamos el display (imprescindible para que se vean los números)
+    // DisplayRefresh(display_global);
+    // Le avisamos al reloj que pasó 1 milisegundo
+    RelojTick(reloj);
+}
+
 /* === Public function implementation ========================================================== */
 
 /*! 
@@ -70,7 +95,13 @@ static void Delay(void) {
 
 int main(void) {
 
-    board_t placa = BoardCreate(); 
+    board_t placa = BoardCreate();
+    display_global = placa->display; // Guardamos el puntero a la pantalla para usarlo en el SysTick_Handler
+    
+    reloj = RelojCreate(1000, NULL); // Configura el reloj para que genere un tick cada 1 ms
+
+    // Configura el SysTick para que salte 1000 veces por segundo (cada 1 ms)
+    SysTick_Config(SystemCoreClock / 1000);
 
     uint8_t digitos[] = {0, 0, 0, 0};
     DisplayWriteBCD(placa->display, digitos, 4);
@@ -89,8 +120,8 @@ int main(void) {
         
         // --- 1. REFRESCO DE PANTALLA (MULTIPLEXADO) ---
         contador_multiplexado++;
-        // Si el modo lento está activo, tardamos 60 ciclos en refrescar. Si no, refrescamos en cada 1 ciclo.
-        uint16_t limite_refresco = modo_lento ? 80 : 1; 
+        // Si el modo lento está activo, tardamos n ciclos en refrescar. Si no, refrescamos en cada 1 ciclo.
+        uint16_t limite_refresco = modo_lento ? 100 : 1; 
         
         if (contador_multiplexado >= limite_refresco) {
             contador_multiplexado = 0;
