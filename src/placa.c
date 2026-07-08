@@ -197,12 +197,12 @@ board_t BoardCreate(void){
     Chip_SCU_PinMuxSet(KEY_CANCEL_PORT, KEY_CANCEL_PIN, SCU_MODE_INBUFF_EN | SCU_MODE_PULLUP | KEY_CANCEL_FUNC);
 
     // 3. Creamos las instancias de digital_input_t (asumiendo lógica invertida por los Pull-Ups)
-    placa_edu.f1 = DigitalInputCreate(KEY_F1_GPIO, KEY_F1_BIT, true);
-    placa_edu.f2 = DigitalInputCreate(KEY_F2_GPIO, KEY_F2_BIT, true);
-    placa_edu.f3 = DigitalInputCreate(KEY_F3_GPIO, KEY_F3_BIT, true);
-    placa_edu.f4 = DigitalInputCreate(KEY_F4_GPIO, KEY_F4_BIT, true);
-    placa_edu.accept = DigitalInputCreate(KEY_ACCEPT_GPIO, KEY_ACCEPT_BIT, true);
-    placa_edu.cancel = DigitalInputCreate(KEY_CANCEL_GPIO, KEY_CANCEL_BIT, true);
+    placa_edu.f1 = DigitalInputCreate(KEY_F1_GPIO, KEY_F1_BIT, false);
+    placa_edu.f2 = DigitalInputCreate(KEY_F2_GPIO, KEY_F2_BIT, false);
+    placa_edu.f3 = DigitalInputCreate(KEY_F3_GPIO, KEY_F3_BIT, false);
+    placa_edu.f4 = DigitalInputCreate(KEY_F4_GPIO, KEY_F4_BIT, false);
+    placa_edu.accept = DigitalInputCreate(KEY_ACCEPT_GPIO, KEY_ACCEPT_BIT, false);
+    placa_edu.cancel = DigitalInputCreate(KEY_CANCEL_GPIO, KEY_CANCEL_BIT, false);
 
     // 4. Configuramos el zumbador (REPRESENTADO POR EL LED AZUL PARA PRUEBAS)
     // Reutilizamos el objeto del led azul en lugar de configurar el pin real del buzzer

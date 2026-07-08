@@ -41,6 +41,7 @@ SPDX-License-Identifier: MIT
 
 display_t display_global; // Puntero a la estructura de la pantalla de 7 segmentos
 clock_t reloj; // Puntero a la estructura del reloj, que gestiona el tiempo y los ticks
+volatile uint32_t contador_ms = 0; // Contador de milisegundos, incrementado en el SysTick_Handler
 
 /*=== Private data type declarations ========================================================== */
 
@@ -55,28 +56,17 @@ typedef enum {
 
 /* === Private function declarations =========================================================== */
 
-static void Delay(void);
+// static void Delay(void);
 
 /* === Private function implementation ========================================================= */
-
-/*! 
- * @brief Retardo por software (bloqueante).
- * * Implementa un bucle iterativo que ejecuta instrucciones NOP (No Operation) 
- * para generar una demora en el flujo del programa. 
- */
-
-static void Delay(void) {
-    for (int delay = 0; delay < 25000; delay++) {
-        __asm("NOP");
-    }
-}
 
 // Esta función interrumpe while(1) cada 1 milisegundo exacto
 void SysTick_Handler(void) {
     // Refrescamos el display (imprescindible para que se vean los números)
-    // DisplayRefresh(display_global);
+    DisplayRefresh(display_global);
     // Le avisamos al reloj que pasó 1 milisegundo
     RelojTick(reloj);
+    contador_ms++; // Incrementamos el contador de milisegundos
 }
 
 /* === Public function implementation ========================================================== */
@@ -94,87 +84,62 @@ void SysTick_Handler(void) {
  */
 
 int main(void) {
-
+    // INICIALIZACIÓN DE HARDWARE
     board_t placa = BoardCreate();
     display_global = placa->display; // Guardamos el puntero a la pantalla para usarlo en el SysTick_Handler
-    
     reloj = RelojCreate(1000, NULL); // Configura el reloj para que genere un tick cada 1 ms
+    SysTick_Config(SystemCoreClock / 1000); // Configura el SysTick para que salte 1000 veces por segundo (cada 1 ms)
 
-    // Configura el SysTick para que salte 1000 veces por segundo (cada 1 ms)
-    SysTick_Config(SystemCoreClock / 1000);
+    // VARIABLES DE CONTROL DE LA APLICACIÓN
+    modo_t estado_reloj = MODO_NORMAL; // Estado inicial del reloj
+    hora_t hora_actual; // Arreglo para almacenar la hora actual (4 dígitos: HHMM)
+    uint32_t tiempo_inicio_f1 = 0;     // Para medir los 3 segundos de F1
 
-    uint8_t digitos[] = {0, 0, 0, 0};
-    DisplayWriteBCD(placa->display, digitos, 4);
+    hora_t hora_inicial = {1, 2, 0, 0, 0, 0}; 
+    RelojSetHora(reloj, hora_inicial);
 
-    // Contadores para separar la velocidad de lectura y de refresco
-    uint16_t contador_rebote = 0;
-    uint16_t contador_multiplexado = 0;
-    
-    // Bandera para activar la demostración en cámara lenta
-    bool modo_lento = false;
+    // Bucle principal de la aplicación. (Super Loop)
+    while(1){
 
-    // Nos aseguramos de que el LED azul (buzzer) arranque apagado (Lógica Negativa)
-    DigitalOutputActivate(placa->buzzer);
+        // MAQUINA DE ESTADOS DEL RELOJ
+        switch(estado_reloj) {
 
-    while (true) {
-        
-        // --- 1. REFRESCO DE PANTALLA (MULTIPLEXADO) ---
-        contador_multiplexado++;
-        // Si el modo lento está activo, tardamos n ciclos en refrescar. Si no, refrescamos en cada 1 ciclo.
-        uint16_t limite_refresco = modo_lento ? 100 : 1; 
-        
-        if (contador_multiplexado >= limite_refresco) {
-            contador_multiplexado = 0;
-            DisplayRefresh(placa->display);
+            case MODO_SIN_AJUSTAR:
+                // Aquí iría la lógica para el modo sin ajustar
+                break;
+            case MODO_NORMAL:
+                // A. Tarea principal del estado: Mostrar la hora
+                RelojGetHora(reloj, hora_actual); 
+                DisplayWriteBCD(placa->display, hora_actual, 4);
+
+                // B. Evaluar transiciones: F1 presionada por 3 segundos para pasar a MODO_MINUTOS
+                if (DigitalInputRead(placa->f1)) {
+                    // La tecla ESTÁ siendo presionada, calculo cuánto tiempo pasó
+                    if ((contador_ms - tiempo_inicio_f1) >= 3000) {
+                        // ¡Pasaron 3 segundos! Cambiamos de estado
+                        estado_reloj = MODO_MINUTOS;
+                    }
+                } else {
+                    // La tecla NO está presionada. 
+                    // Anclamos el tiempo de inicio al tiempo actual continuamente.
+                    tiempo_inicio_f1 = contador_ms; 
+                }    
+                break;
+            case MODO_MINUTOS:
+                // Mostramos el arreglo [1, 1, 1, 1] para saber si el salto funcionó
+                hora_actual[0] = 1; hora_actual[1] = 1; hora_actual[2] = 1; hora_actual[3] = 1;
+                DisplayWriteBCD(placa->display, hora_actual, 4);
+                break;
+            case MODO_HORAS:
+                // Aquí iría la lógica para ajustar horas
+                break;
+            case MODO_MINUTOS_ALARMA:
+                // Aquí iría la lógica para ajustar minutos de alarma
+                break;
+            case MODO_HORAS_ALARMA:
+                // Aquí iría la lógica para ajustar horas de alarma
+                break;
         }
-
-        // --- 2. LECTURA DE BOTONES (ANTIRREBOTE) ---
-        contador_rebote++;
-        if (contador_rebote >= 40) { 
-            contador_rebote = 0;
-            
-            // F1 a F4: Incrementan los dígitos
-            if (DigitalInputHasActivated(placa->f4)) { 
-                digitos[0] = (digitos[0] + 1) % 10;
-                DisplayWriteBCD(placa->display, digitos, 4);
-            }
-            if (DigitalInputHasActivated(placa->f3)) { 
-                digitos[1] = (digitos[1] + 1) % 10;
-                DisplayWriteBCD(placa->display, digitos, 4);
-            }
-            if (DigitalInputHasActivated(placa->f2)) { 
-                digitos[2] = (digitos[2] + 1) % 10;
-                DisplayWriteBCD(placa->display, digitos, 4);
-            }
-            if (DigitalInputHasActivated(placa->f1)) { 
-                digitos[3] = (digitos[3] + 1) % 10;
-                DisplayWriteBCD(placa->display, digitos, 4);
-            }
-
-            // Tecla CANCEL: Activa/Desactiva la demostración del multiplexado
-            if (DigitalInputHasActivated(placa->cancel)) {
-                modo_lento = !modo_lento; // Alternar entre rápido y lento
-                
-                // Al activar la cámara lenta, forzamos los números 1, 2, 3, 4
-                if (modo_lento) {
-                    digitos[0] = 1;
-                    digitos[1] = 2;
-                    digitos[2] = 3;
-                    digitos[3] = 4;
-                    DisplayWriteBCD(placa->display, digitos, 4);
-                }
-            }
-        }
-
-        // --- 3. PRUEBA DE BUZZER / LED AZUL ---
-        // Mientras mantengamos presionada la tecla ACCEPT, suena el buzzer (LED Azul encendido). Al soltarla, se apaga.
-        if (DigitalInputRead(placa->accept)) {
-            DigitalOutputDeactivate(placa->buzzer); // Lógica invertida: Prende
-        } else {
-            DigitalOutputActivate(placa->buzzer);   // Lógica invertida: Apaga
-        }
-
-        Delay();
     }
 
     return 0;
