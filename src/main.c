@@ -280,10 +280,42 @@ int main(void) {
                 }
                 break;
             case MODO_MINUTOS_ALARMA:
-                // Aquí iría la lógica para ajustar minutos de alarma
+                
+                DisplayWriteBCD(placa->display, hora_actual, 4);
+
+                if (DigitalInputHasActivated(placa->cancel)) {
+                    CambiarModo(MODO_NORMAL); // Descarta cambios
+                }
+                if (DigitalInputHasActivated(placa->accept)) {
+                    CambiarModo(MODO_HORAS_ALARMA); // Pasa a editar horas de la alarma
+                }
+                if (DigitalInputHasActivated(placa->f4)) {
+                    IncrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
+                }
+                if (DigitalInputHasActivated(placa->f3)) {
+                    DecrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
+                }
                 break;
+
             case MODO_HORAS_ALARMA:
-                // Aquí iría la lógica para ajustar horas de alarma
+
+                DisplayWriteBCD(placa->display, hora_actual, 4);
+
+                
+                if (DigitalInputHasActivated(placa->cancel)) {
+                    CambiarModo(MODO_NORMAL); // Descarta cambios
+                }
+                if (DigitalInputHasActivated(placa->accept)) {
+                    // Guardamos el borrador en la Alarma
+                    RelojSetAlarma(reloj, hora_actual);
+                    CambiarModo(MODO_NORMAL);
+                }
+                if (DigitalInputHasActivated(placa->f4)) {
+                    IncrementarBCD(&hora_actual[0], LIMITE_HORAS);
+                }
+                if (DigitalInputHasActivated(placa->f3)) {
+                    DecrementarBCD(&hora_actual[0], LIMITE_HORAS);
+                }
                 break;
         }
     }
