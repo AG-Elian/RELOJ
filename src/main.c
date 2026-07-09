@@ -196,6 +196,16 @@ int main(void) {
                 RelojGetHora(reloj, hora_actual); 
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
+                // --- INDICADOR DE SEGUNDOS ---
+                if ((contador_ms % 1000) < 500) {
+                    DisplayToggleDots(placa->display, 1, 1);
+                }
+
+                // --- INDICADOR DE ALARMA ACTIVA ---
+                if (RelojAlarmaEstaActiva(reloj)) {
+                    DisplayToggleDots(placa->display, 3, 3);
+                }
+
                 // Transición 1: F1 por 3 segundos (Reajustar la hora)
                 if (DigitalInputRead(placa->f1)) {
                     if ((contador_ms - tiempo_inicio_f1) >= 3000) {
@@ -280,8 +290,13 @@ int main(void) {
                 }
                 break;
             case MODO_MINUTOS_ALARMA:
-                
+                // En este modo la pantalla parpadea sola gracias a CambiarModo(),
+                // solo necesitamos actualizar constantemente el valor en la pantalla
+                // con nuestra copia "borrador" local (hora_actual).
                 DisplayWriteBCD(placa->display, hora_actual, 4);
+                
+                DisplayToggleDots(placa->display, 0, 3); // Parpadeo de los puntos de la pantalla para indicar que estamos en modo de ajuste de minutos
+
 
                 if (DigitalInputHasActivated(placa->cancel)) {
                     CambiarModo(MODO_NORMAL); // Descarta cambios
@@ -301,7 +316,8 @@ int main(void) {
 
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                
+                DisplayToggleDots(placa->display, 0, 3); // Parpadeo de los puntos de la pantalla para indicar que estamos en modo de ajuste de horas
+
                 if (DigitalInputHasActivated(placa->cancel)) {
                     CambiarModo(MODO_NORMAL); // Descarta cambios
                 }
