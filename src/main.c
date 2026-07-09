@@ -151,7 +151,7 @@ void DecrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
 
 int main(void) {
 
-    uint8_t entrada[4] = {0, 0, 0, 0}; 
+    // uint8_t entrada[4] = {0, 0, 0, 0}; 
 
     // INICIALIZACIÓN DE HARDWARE
     board_t placa = BoardCreate();
@@ -162,12 +162,13 @@ int main(void) {
     // VARIABLES DE CONTROL DE LA APLICACIÓN
     hora_t hora_actual; // Arreglo para almacenar la hora actual (4 dígitos: HHMM) "borrador"
     uint32_t tiempo_inicio_f1 = 0;     // Para medir los 3 segundos de F1
+    uint32_t tiempo_inicio_f2 = 0;     // Para medir los 3 segundos de F2
 
     hora_t hora_inicial = {1, 2, 0, 0, 0, 0}; 
     RelojSetHora(reloj, hora_inicial);
 
     //FUERZO EL ESTADO INICIAL DEL RELOJ A MODO_NORMAL
-    CambiarModo(MODO_NORMAL);
+    CambiarModo(MODO_SIN_AJUSTAR);
 
     // Bucle principal de la aplicación. (Super Loop)
     while(true){
@@ -176,24 +177,46 @@ int main(void) {
         switch(modo) {
 
             case MODO_SIN_AJUSTAR:
-                // Aquí iría la lógica para el modo sin ajustar
-                break;
-            case MODO_NORMAL:
-                // A. Mostrar la hora actual provista por el reloj
+                // Tarea: Mostrar la hora (CambiarModo ya hace que parpadee todo)
                 RelojGetHora(reloj, hora_actual); 
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // B. Evaluar transiciones
-                // Entrar a configurar hora (mantener F1 por 3 segundos)
+                // Transición: F1 por 3 segundos para ir a ajustar la hora
                 if (DigitalInputRead(placa->f1)) {
                     if ((contador_ms - tiempo_inicio_f1) >= 3000) {
-                        CambiarModo(MODO_MINUTOS); // Usa tu función centralizada
+                        CambiarModo(MODO_MINUTOS);
                     }
                 } else {
-                    tiempo_inicio_f1 = contador_ms; // Ancla el tiempo si no está presionada
+                    tiempo_inicio_f1 = contador_ms; 
+                }
+                break;
+
+            case MODO_NORMAL:
+                // Tarea principal: Mostrar la hora fluida
+                RelojGetHora(reloj, hora_actual); 
+                DisplayWriteBCD(placa->display, hora_actual, 4);
+
+                // Transición 1: F1 por 3 segundos (Reajustar la hora)
+                if (DigitalInputRead(placa->f1)) {
+                    if ((contador_ms - tiempo_inicio_f1) >= 3000) {
+                        CambiarModo(MODO_MINUTOS); 
+                    }
+                } else {
+                    tiempo_inicio_f1 = contador_ms; 
                 }    
                 
-                // C. Activar/Desactivar alarma con Accept y Cancel en modo normal
+                // Transición 2: F2 por 3 segundos (Ajustar alarma)
+                if (DigitalInputRead(placa->f2)) {
+                    if ((contador_ms - tiempo_inicio_f2) >= 3000) {
+                        // Cargamos el borrador con la hora de la ALARMA
+                        RelojGetAlarma(reloj, hora_actual); 
+                        CambiarModo(MODO_MINUTOS_ALARMA);
+                    }
+                } else {
+                    tiempo_inicio_f2 = contador_ms; 
+                } 
+
+                // Tarea secundaria: Activar/Desactivar alarma
                 if (DigitalInputHasActivated(placa->accept)) {
                     RelojActivarAlarma(reloj, true);
                 }
@@ -201,7 +224,6 @@ int main(void) {
                     RelojActivarAlarma(reloj, false);
                 }
                 break;
-
 
             case MODO_MINUTOS:
                 // En este modo la pantalla parpadea sola gracias a CambiarModo(),
