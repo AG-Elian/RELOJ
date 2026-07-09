@@ -61,7 +61,6 @@ static const uint8_t LIMITE_HORAS[2] = { 2, 3 };   // Límite de horas en format
 
 /* === Private function declarations =========================================================== */
 
-// static void Delay(void);
 
 /* === Private function implementation ========================================================= */
 
@@ -70,6 +69,18 @@ void SysTick_Handler(void) {
     DisplayRefresh(display_global);
     RelojTick(reloj);
     contador_ms++;
+}
+
+// Función auxiliar para controlar el estado absoluto de los puntos (estaban a destiempo)
+void SetPunto(display_t display, uint8_t digito, bool encender) {
+    // Esta memoria estática "recuerda" si los puntos están físicamente prendidos o apagados
+    static bool estado_puntos[4] = {false, false, false, false};
+    
+    // Solo usamos el Toggle si el estado que deseamos es diferente al físico actual
+    if (estado_puntos[digito] != encender) {
+        DisplayToggleDots(display, digito, digito);
+        estado_puntos[digito] = encender; // Actualizamos nuestro registro
+    }
 }
 
 void CambiarModo(modo_t valor) {
@@ -112,12 +123,17 @@ void SonarAlarma(void) {
 
 void IncrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
     numero[1]++; // Incrementamos el dígito de las unidades
+    
+    // 1. Manejamos el desbordamiento normal (0 al 9)
     if (numero[1] > 9) {
         numero[1] = 0; // Reiniciamos las unidades a 0
-        numero[0]++; // Incrementamos el dígito de las decenas
-        if (numero[0] > limite[0] || (numero[0] == limite[0] && numero[1] > limite[1])) {
-            numero[0] = 0; // Reiniciamos las decenas a 0 si se supera el límite
-        }
+        numero[0]++;   // Incrementamos el dígito de las decenas
+    }
+    
+    // 2. Verificamos el límite global (ej. 23 o 59) SIEMPRE
+    if (numero[0] > limite[0] || (numero[0] == limite[0] && numero[1] > limite[1])) {
+        numero[0] = 0; // Reiniciamos las decenas a 0
+        numero[1] = 0; // Reiniciamos las unidades a 0
     }
 }
 
@@ -196,15 +212,11 @@ int main(void) {
                 RelojGetHora(reloj, hora_actual); 
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // --- INDICADOR DE SEGUNDOS ---
-                if ((contador_ms % 1000) < 500) {
-                    DisplayToggleDots(placa->display, 1, 1);
-                }
-
-                // --- INDICADOR DE ALARMA ACTIVA ---
-                if (RelojAlarmaEstaActiva(reloj)) {
-                    DisplayToggleDots(placa->display, 3, 3);
-                }
+                // --- MANEJO DE PUNTOS ---
+                SetPunto(placa->display, 0, false);
+                SetPunto(placa->display, 1, ((contador_ms % 1000) < 500)); // Segundero perfecto
+                SetPunto(placa->display, 2, false);
+                SetPunto(placa->display, 3, RelojAlarmaEstaActiva(reloj)); // Luz de alarma
 
                 // Transición 1: F1 por 3 segundos (Reajustar la hora)
                 if (DigitalInputRead(placa->f1)) {
@@ -294,9 +306,12 @@ int main(void) {
                 // solo necesitamos actualizar constantemente el valor en la pantalla
                 // con nuestra copia "borrador" local (hora_actual).
                 DisplayWriteBCD(placa->display, hora_actual, 4);
-                
-                DisplayToggleDots(placa->display, 0, 3); // Parpadeo de los puntos de la pantalla para indicar que estamos en modo de ajuste de minutos
 
+                // Forzamos los 4 puntos encendidos fijos
+                SetPunto(placa->display, 0, true);
+                SetPunto(placa->display, 1, true);
+                SetPunto(placa->display, 2, true);
+                SetPunto(placa->display, 3, true);
 
                 if (DigitalInputHasActivated(placa->cancel)) {
                     CambiarModo(MODO_NORMAL); // Descarta cambios
@@ -316,7 +331,11 @@ int main(void) {
 
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                DisplayToggleDots(placa->display, 0, 3); // Parpadeo de los puntos de la pantalla para indicar que estamos en modo de ajuste de horas
+                // Forzamos los 4 puntos encendidos fijos
+                SetPunto(placa->display, 0, true);
+                SetPunto(placa->display, 1, true);
+                SetPunto(placa->display, 2, true);
+                SetPunto(placa->display, 3, true);
 
                 if (DigitalInputHasActivated(placa->cancel)) {
                     CambiarModo(MODO_NORMAL); // Descarta cambios
