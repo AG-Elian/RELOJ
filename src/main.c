@@ -54,7 +54,9 @@ display_t display_global; // Puntero a la estructura de la pantalla de 7 segment
 
 clock_t reloj; // Puntero a la estructura del reloj, que gestiona el tiempo y los ticks
 volatile uint32_t contador_ms = 0; // Contador de milisegundos, incrementado en el SysTick_Handler
-static modo_t modo; 
+static modo_t modo;
+
+volatile bool alarma_sonando = false; // Bandera para saber si el buzzer debe sonar
 
 static const uint8_t LIMITE_MINUTOS[2] = { 5, 9 }; // Límite de minutos en formato BCD (59)
 static const uint8_t LIMITE_HORAS[2] = { 2, 3 };   // Límite de horas en formato BCD (23)
@@ -118,7 +120,7 @@ void CambiarModo(modo_t valor) {
 }
 
 void SonarAlarma(void) {
-    // Aquí iría la lógica para hacer sonar el buzzer cuando la alarma se active
+    alarma_sonando = true; // Establecemos la bandera para indicar que la alarma debe sonar
 }
 
 void IncrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
@@ -174,6 +176,7 @@ int main(void) {
     display_global = placa->display; // Guardamos el puntero a la pantalla para usarlo en el SysTick_Handler
     reloj = RelojCreate(1000, SonarAlarma); // Configura el reloj para que genere un tick cada 1 ms
     SysTick_Config(SystemCoreClock / 1000); // Configura el SysTick para que salte 1000 veces por segundo (cada 1 ms)
+    DigitalOutputDeactivate(placa->buzzer);
 
     // VARIABLES DE CONTROL DE LA APLICACIÓN
     hora_t hora_actual; // Arreglo para almacenar la hora actual (4 dígitos: HHMM) "borrador"
@@ -238,12 +241,29 @@ int main(void) {
                     tiempo_inicio_f2 = contador_ms; 
                 } 
 
-                // Tarea secundaria: Activar/Desactivar alarma
-                if (DigitalInputHasActivated(placa->accept)) {
-                    RelojActivarAlarma(reloj, true);
-                }
-                if (DigitalInputHasActivated(placa->cancel)) {
-                    RelojActivarAlarma(reloj, false);
+                // --- MANEJO DE LA ALARMA SONANDO Y BUZZER ---
+                if (alarma_sonando) {
+                    DigitalOutputActivate(placa->buzzer); // Hacemos ruido
+
+                    // Aceptar: Pospone por 5 minutos
+                    if (DigitalInputHasActivated(placa->accept)) {
+                        RelojPosponerAlarma(reloj, 5);
+                        alarma_sonando = false;
+                        DigitalOutputDeactivate(placa->buzzer);
+                    }
+                    // Cancelar: La apaga por hoy (hasta el día siguiente)
+                    if (DigitalInputHasActivated(placa->cancel)) {
+                        alarma_sonando = false;
+                        DigitalOutputDeactivate(placa->buzzer);
+                    }
+                } else {
+                    // Si no está sonando, operan normalmente para Activar/Desactivar
+                    if (DigitalInputHasActivated(placa->accept)) {
+                        RelojActivarAlarma(reloj, true);
+                    }
+                    if (DigitalInputHasActivated(placa->cancel)) {
+                        RelojActivarAlarma(reloj, false);
+                    }
                 }
                 break;
 
