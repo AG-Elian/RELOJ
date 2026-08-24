@@ -24,12 +24,20 @@ SPDX-License-Identifier: MIT
 *************************************************************************************************/
 
 /*! @file main.c
- ** @brief Aplicación de prueba del Poncho para la placa EDU-CIAA-NXP.
- */
+ ** @brief Aplicación principal del Reloj Despertador para la placa EDU-CIAA-NXP.
+ **
+ ** Este módulo contiene el Super Loop principal y la máquina de estados que gestiona
+ ** el funcionamiento integral del reloj despertador, controlando la puesta en hora,
+ ** la configuración de la alarma, el parpadeo de dígitos y puntos decimales, el
+ ** temporizador de inactividad (timeout de 30 segundos) y el silenciado/posposición 
+ ** (Snooze) de la alarma.
+ **/
 
 #ifndef EDU_CIAA_NXP
 #error "This program can only be compiled for the EDU-CIAA-NXP board"
 #endif
+
+/* === Headers files inclusions ==================================================================================== */
 
 #include "digital.h"
 #include "placa.h"
@@ -37,173 +45,262 @@ SPDX-License-Identifier: MIT
 #include "poncho.h"  
 #include "screen.h"  
 
-/*=== Private data type declarations ========================================================== */
+/* === Private macros definitions ============================================================= */
 
+/*! @brief Tiempo en milisegundos de pulsación sostenida para cambiar de modo (3 segundos) */
+#define TIEMPO_PULSACION_MS 3000U
+
+/*! @brief Tiempo de inactividad máximo en modos de edición para cancelar cambios (30 segundos) */
+#define TIMEOUT_INACTIVIDAD_MS 30000U
+
+/* === Private data type declarations ========================================================== */
+
+/*! 
+ * @brief Estados de la máquina de estados del reloj y la alarma.
+ */
 typedef enum {
-    MODO_SIN_AJUSTAR,
-    MODO_NORMAL,
-    MODO_MINUTOS,
-    MODO_HORAS,
-    MODO_MINUTOS_ALARMA,
-    MODO_HORAS_ALARMA
+    MODO_SIN_AJUSTAR,    /*!< Estado inicial por defecto; la pantalla destella completamente */
+    MODO_NORMAL,         /*!< Funcionamiento normal; muestra la hora actual y titila el segundero */
+    MODO_MINUTOS,        /*!< Modo de configuración de los minutos de la hora actual */
+    MODO_HORAS,          /*!< Modo de configuración de las horas de la hora actual */
+    MODO_MINUTOS_ALARMA, /*!< Modo de configuración de los minutos de la alarma */
+    MODO_HORAS_ALARMA    /*!< Modo de configuración de las horas de la alarma */
 } modo_t;
 
 /* === Private variables definitions ========================================================= */
 
-display_t display_global; // Puntero a la estructura de la pantalla de 7 segmentos
+/*! @brief Descriptor global de la pantalla de 7 segmentos para acceso desde la ISR */
+display_t display_global; 
 
-clock_t reloj; // Puntero a la estructura del reloj, que gestiona el tiempo y los ticks
-volatile uint32_t contador_ms = 0; // Contador de milisegundos, incrementado en el SysTick_Handler
-static modo_t modo;
+/*! @brief Instancia lógica del reloj que gestiona la hora y los eventos de alarma */
+clock_t reloj; 
 
-volatile bool alarma_sonando = false; // Bandera para saber si el buzzer debe sonar
+/*! @brief Base de tiempo global incrementada cada 1 ms en el SysTick_Handler */
+volatile uint32_t contador_ms = 0; 
 
-static const uint8_t LIMITE_MINUTOS[2] = { 5, 9 }; // Límite de minutos en formato BCD (59)
-static const uint8_t LIMITE_HORAS[2] = { 2, 3 };   // Límite de horas en formato BCD (23)
+/*! @brief Almacena el modo operativo actual de la máquina de estados */
+static modo_t modo; 
+
+/*! @brief Bandera lógica global que indica si la alarma se encuentra en reproducción */
+volatile bool alarma_sonando = false; 
+
+/*! @brief Límite superior compuesto para minutos en formato BCD descompactado (59) */
+static const uint8_t LIMITE_MINUTOS[2] = { 5, 9 }; 
+
+/*! @brief Límite superior compuesto para horas en formato BCD descompactado (23) */
+static const uint8_t LIMITE_HORAS[2] = { 2, 3 };   
 
 /* === Private function declarations =========================================================== */
 
+void SetPunto(display_t display, uint8_t digito, bool encender);
+void CambiarModo(modo_t nuevo_modo, hora_t hora_borrador);
+void SonarAlarma(void);
+void IncrementarBCD(uint8_t numero[2], const uint8_t limite[2]);
+void DecrementarBCD(uint8_t numero[2], const uint8_t limite[2]);
 
 /* === Private function implementation ========================================================= */
 
-// Esta función interrumpe while(1) cada 1 milisegundo exacto
+/*! 
+ * @brief Rutina de atención de la interrupción del SysTick (ISR).
+ * Interrumpe de manera determinística el lazo principal cada 1 ms (1 kHz) para
+ * refrescar el multiplexado de los displays y avanzar el contador de ticks del reloj.
+ */
 void SysTick_Handler(void) {
     DisplayRefresh(display_global);
     RelojTick(reloj);
     contador_ms++;
 }
 
-// Función auxiliar para controlar el estado absoluto de los puntos (estaban a destiempo)
+/*! 
+ * @brief Controla de forma absoluta el estado físico de un punto decimal específico.
+ * Evita el parpadeo de alta frecuencia (efecto PWM) realizando la inversión lógica 
+ * (Toggle) únicamente si el estado deseado difiere del estado actual registrado.
+ * * @param[in] display Descriptor de la pantalla multiplexada.
+ * @param[in] digito  Índice del dígito cuyo punto se desea controlar (0 a 3).
+ * @param[in] encender Booleano que define si se enciende (true) o apaga (false) el punto.
+ */
 void SetPunto(display_t display, uint8_t digito, bool encender) {
-    // Esta memoria estática "recuerda" si los puntos están físicamente prendidos o apagados
     static bool estado_puntos[4] = {false, false, false, false};
     
-    // Solo usamos el Toggle si el estado que deseamos es diferente al físico actual
     if (estado_puntos[digito] != encender) {
         DisplayToggleDots(display, digito, digito);
-        estado_puntos[digito] = encender; // Actualizamos nuestro registro
+        estado_puntos[digito] = encender; 
     }
 }
 
-void CambiarModo(modo_t valor) {
-    modo=valor;
+/*! 
+ * @brief Realiza la transición de estados del sistema unificando todas las acciones colaterales.
+ * Actualiza el modo operativo y centraliza la configuración de parpadeo de dígitos,
+ * encendido de puntos indicativos y la carga del buffer borrador según el estado destino.
+ * * @param[in]     nuevo_modo    El nuevo estado de tipo @ref modo_t al que transiciona el reloj.
+ * @param[in,out] hora_borrador Arreglo borrador donde se carga la hora o alarma para edición.
+ */
+void CambiarModo(modo_t nuevo_modo, hora_t hora_borrador) {
+    modo = nuevo_modo;
 
-    switch (modo)
-    {
-    case MODO_SIN_AJUSTAR:
-        DisplayFlashDigits(display_global, 0, 3, 250);
-        break;
-    
-    case MODO_NORMAL:
-        DisplayFlashDigits(display_global, 0, 0, 0);
-        break;
+    switch (modo) {
+        case MODO_SIN_AJUSTAR:
+            DisplayFlashDigits(display_global, 0, 3, 250);
+            SetPunto(display_global, 0, false);
+            SetPunto(display_global, 1, false);
+            SetPunto(display_global, 2, false);
+            SetPunto(display_global, 3, false);
+            break;
+        
+        case MODO_NORMAL:
+            DisplayFlashDigits(display_global, 0, 0, 0); // Apaga destello de dígitos
+            SetPunto(display_global, 0, false);
+            SetPunto(display_global, 2, false);
+            break;
 
-    case MODO_MINUTOS:
-        DisplayFlashDigits(display_global, 2, 3, 250);
-        break;
+        case MODO_MINUTOS:
+            DisplayFlashDigits(display_global, 2, 3, 250); // Parpadean minutos
+            SetPunto(display_global, 0, false);
+            SetPunto(display_global, 1, false);
+            SetPunto(display_global, 2, false);
+            SetPunto(display_global, 3, false);
+            break;
 
-    case MODO_HORAS:
-        DisplayFlashDigits(display_global, 0, 1, 250);
-        break;
+        case MODO_HORAS:
+            DisplayFlashDigits(display_global, 0, 1, 250); // Parpadean horas
+            SetPunto(display_global, 0, false);
+            SetPunto(display_global, 1, false);
+            SetPunto(display_global, 2, false);
+            SetPunto(display_global, 3, false);
+            break;
 
-    case MODO_MINUTOS_ALARMA:
-        DisplayFlashDigits(display_global, 2, 3, 250);
-        break;
+        case MODO_MINUTOS_ALARMA:
+            if (hora_borrador != NULL) {
+                RelojGetAlarma(reloj, hora_borrador); // Carga la alarma actual al borrador
+            }
+            DisplayFlashDigits(display_global, 2, 3, 250); // Parpadean minutos de alarma
+            SetPunto(display_global, 0, true);
+            SetPunto(display_global, 1, true);
+            SetPunto(display_global, 2, true);
+            SetPunto(display_global, 3, true);
+            break;
 
-    case MODO_HORAS_ALARMA:
-        DisplayFlashDigits(display_global, 0, 1, 250);
-        break;
+        case MODO_HORAS_ALARMA:
+            DisplayFlashDigits(display_global, 0, 1, 250); // Parpadean horas de alarma
+            SetPunto(display_global, 0, true);
+            SetPunto(display_global, 1, true);
+            SetPunto(display_global, 2, true);
+            SetPunto(display_global, 3, true);
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 }
 
+/*! 
+ * @brief Función callback que se ejecuta automáticamente cuando se dispara la alarma.
+ * Registrada en la instanciación del reloj, asienta de forma asincrónica la bandera
+ * global para activar las acciones sonoras en el lazo principal.
+ */
 void SonarAlarma(void) {
-    alarma_sonando = true; // Establecemos la bandera para indicar que la alarma debe sonar
+    alarma_sonando = true; 
 }
 
+/*! 
+ * @brief Incrementa un par de dígitos representados en formato BCD descompactado.
+ * Resguarda las reglas aritméticas de acarreo posicional y evalúa en cada ciclo el
+ * límite compuesto provisto para realizar el reinicio circular (Rollover).
+ * * @param[in,out] numero Arreglo de 2 elementos que almacena las decenas [0] y unidades [1].
+ * @param[in]     limite Arreglo de 2 elementos que define el valor máximo admisible.
+ */
 void IncrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
-    numero[1]++; // Incrementamos el dígito de las unidades
+    numero[1]++; 
     
-    // 1. Manejamos el desbordamiento normal (0 al 9)
     if (numero[1] > 9) {
-        numero[1] = 0; // Reiniciamos las unidades a 0
-        numero[0]++;   // Incrementamos el dígito de las decenas
+        numero[1] = 0; 
+        numero[0]++;   
     }
     
-    // 2. Verificamos el límite global (ej. 23 o 59) SIEMPRE
     if (numero[0] > limite[0] || (numero[0] == limite[0] && numero[1] > limite[1])) {
-        numero[0] = 0; // Reiniciamos las decenas a 0
-        numero[1] = 0; // Reiniciamos las unidades a 0
+        numero[0] = 0; 
+        numero[1] = 0; 
     }
 }
 
+/*! 
+ * @brief Decrementa un par de dígitos representados en formato BCD descompactado.
+ * Controla el subdesbordamiento de las unidades y decenas realizando el retorno circular
+ * hacia el valor límite superior cuando el par posicional alcanza el valor nulo (00).
+ * * @param[in,out] numero Arreglo de 2 elementos que almacena las decenas [0] y unidades [1].
+ * @param[in]     limite Arreglo de 2 elementos que define el valor de reinicio superior.
+ */
 void DecrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
     if (numero[1] == 0) {
         if (numero[0] == 0) {
-            // Si ambos dígitos son 0, reiniciamos al límite
             numero[0] = limite[0];
             numero[1] = limite[1];
         } else {
-            numero[0]--; // Decrementamos las decenas
-            numero[1] = 9; // Reiniciamos las unidades a 9
+            numero[0]--; 
+            numero[1] = 9; 
         }
     } else {
-        numero[1]--; // Decrementamos las unidades
+        numero[1]--; 
     }
 }
+
 /* === Public function implementation ========================================================== */
 
 /*! 
- * @brief Función principal del sistema.
- * * Punto de entrada de la aplicación. Se encarga de inicializar los recursos
- * de hardware mediante el Board Support Package (BSP), configurar el estado inicial
- * de la pantalla y el buzzer, y ejecutar el bucle infinito de control (Super Loop).
- * Dentro del bucle gestiona:
- * - El refresco multiplexado de la pantalla de 7 segmentos.
- * - La lectura por sondeo (polling) de botones con filtrado por software.
- * - La lógica de la cámara lenta (Slow-mo) para observar el multiplexado.
- * * @return int Retorna siempre 0 (el flujo no debería salir del bucle infinito).
+ * @brief Función principal del sistema (Punto de entrada).
+ * Inicializa el hardware a través de la capa HAL, establece una hora inicial por defecto,
+ * fuerza el estado primario no configurado y ejecuta de manera infinita el bucle de control 
+ * (Super Loop) que evalúa las entradas lógicas, timeouts por inactividad y las acciones asociadas.
+ * * @return int Retorna siempre 0 (el flujo operativo no debería salir del bucle continuo).
  */
-
 int main(void) {
 
-    // uint8_t entrada[4] = {0, 0, 0, 0}; 
-
-    // INICIALIZACIÓN DE HARDWARE
+    // INICIALIZACIÓN DE HARDWARE Y DRIVERS
     board_t placa = BoardCreate();
-    display_global = placa->display; // Guardamos el puntero a la pantalla para usarlo en el SysTick_Handler
-    reloj = RelojCreate(1000, SonarAlarma); // Configura el reloj para que genere un tick cada 1 ms
-    SysTick_Config(SystemCoreClock / 1000); // Configura el SysTick para que salte 1000 veces por segundo (cada 1 ms)
+    display_global = placa->display; 
+    reloj = RelojCreate(1000, SonarAlarma); 
+    SysTick_Config(SystemCoreClock / 1000); 
     DigitalOutputDeactivate(placa->buzzer);
 
-    // VARIABLES DE CONTROL DE LA APLICACIÓN
-    hora_t hora_actual; // Arreglo para almacenar la hora actual (4 dígitos: HHMM) "borrador"
-    uint32_t tiempo_inicio_f1 = 0;     // Para medir los 3 segundos de F1
-    uint32_t tiempo_inicio_f2 = 0;     // Para medir los 3 segundos de F2
+    // CONTROL INICIAL DE VARIABLES
+    hora_t hora_actual; 
+    uint32_t tiempo_inicio_f1 = 0;     
+    uint32_t tiempo_inicio_f2 = 0;     
+    uint32_t tiempo_ultima_actividad = 0;
 
     hora_t hora_inicial = {1, 2, 0, 0, 0, 0}; 
     RelojSetHora(reloj, hora_inicial);
 
-    //FUERZO EL ESTADO INICIAL DEL RELOJ A MODO_NORMAL
-    CambiarModo(MODO_SIN_AJUSTAR);
+    // El sistema se inicia forzando el estado sin ajustar exigido por la cátedra
+    CambiarModo(MODO_SIN_AJUSTAR, NULL);
 
-    // Bucle principal de la aplicación. (Super Loop)
+    // LAZO INFINITO DE CONTROL (SUPER LOOP)
     while(true){
 
-        // MAQUINA DE ESTADOS DEL RELOJ
+        // TEMPORIZADOR DE INACTIVIDAD (Timeout de 30 segundos en modos de edición)
+        if (modo == MODO_MINUTOS || modo == MODO_HORAS || 
+            modo == MODO_MINUTOS_ALARMA || modo == MODO_HORAS_ALARMA) {
+            if ((contador_ms - tiempo_ultima_actividad) >= TIMEOUT_INACTIVIDAD_MS) {
+                CambiarModo(MODO_NORMAL, NULL); // Descarta cambios por inactividad
+            }
+        }
+
         switch(modo) {
 
             case MODO_SIN_AJUSTAR:
-                // Tarea: Mostrar la hora (CambiarModo ya hace que parpadee todo)
                 RelojGetHora(reloj, hora_actual); 
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // Transición: F1 por 3 segundos para ir a ajustar la hora
+                SetPunto(placa->display, 0, false);
+                SetPunto(placa->display, 1, ((contador_ms % 1000) < 500)); 
+                SetPunto(placa->display, 2, false);
+                SetPunto(placa->display, 3, false);
+
+                // Sondeo no bloqueante de F1 retenida por TIEMPO_PULSACION_MS
                 if (DigitalInputRead(placa->f1)) {
-                    if ((contador_ms - tiempo_inicio_f1) >= 3000) {
-                        CambiarModo(MODO_MINUTOS);
+                    if ((contador_ms - tiempo_inicio_f1) >= TIEMPO_PULSACION_MS) {
+                        tiempo_ultima_actividad = contador_ms;
+                        CambiarModo(MODO_MINUTOS, NULL);
                     }
                 } else {
                     tiempo_inicio_f1 = contador_ms; 
@@ -211,53 +308,46 @@ int main(void) {
                 break;
 
             case MODO_NORMAL:
-                // Tarea principal: Mostrar la hora fluida
                 RelojGetHora(reloj, hora_actual); 
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // --- MANEJO DE PUNTOS ---
-                SetPunto(placa->display, 0, false);
-                SetPunto(placa->display, 1, ((contador_ms % 1000) < 500)); // Segundero perfecto
-                SetPunto(placa->display, 2, false);
-                SetPunto(placa->display, 3, RelojAlarmaEstaActiva(reloj)); // Luz de alarma
+                SetPunto(placa->display, 1, ((contador_ms % 1000) < 500)); 
+                SetPunto(placa->display, 3, RelojAlarmaEstaActiva(reloj)); 
 
-                // Transición 1: F1 por 3 segundos (Reajustar la hora)
+                // Transición 1: F1 retenida por TIEMPO_PULSACION_MS (Reconfigurar hora)
                 if (DigitalInputRead(placa->f1)) {
-                    if ((contador_ms - tiempo_inicio_f1) >= 3000) {
-                        CambiarModo(MODO_MINUTOS); 
+                    if ((contador_ms - tiempo_inicio_f1) >= TIEMPO_PULSACION_MS) {
+                        tiempo_ultima_actividad = contador_ms;
+                        CambiarModo(MODO_MINUTOS, NULL); 
                     }
                 } else {
                     tiempo_inicio_f1 = contador_ms; 
                 }    
                 
-                // Transición 2: F2 por 3 segundos (Ajustar alarma)
+                // Transición 2: F2 retenida por TIEMPO_PULSACION_MS (Configurar Alarma)
                 if (DigitalInputRead(placa->f2)) {
-                    if ((contador_ms - tiempo_inicio_f2) >= 3000) {
-                        // Cargamos el borrador con la hora de la ALARMA
-                        RelojGetAlarma(reloj, hora_actual); 
-                        CambiarModo(MODO_MINUTOS_ALARMA);
+                    if ((contador_ms - tiempo_inicio_f2) >= TIEMPO_PULSACION_MS) {
+                        tiempo_ultima_actividad = contador_ms;
+                        CambiarModo(MODO_MINUTOS_ALARMA, hora_actual); // Carga la alarma al borrador internamente
                     }
                 } else {
                     tiempo_inicio_f2 = contador_ms; 
                 } 
 
-                // --- MANEJO DE LA ALARMA SONANDO Y BUZZER ---
+                // Gestión sonora activa y eventos de Snooze/Silenciado
                 if (alarma_sonando) {
-                    DigitalOutputActivate(placa->buzzer); // Hacemos ruido
+                    DigitalOutputActivate(placa->buzzer); 
 
-                    // Aceptar: Pospone por 5 minutos
                     if (DigitalInputHasActivated(placa->accept)) {
                         RelojPosponerAlarma(reloj, 5);
                         alarma_sonando = false;
                         DigitalOutputDeactivate(placa->buzzer);
                     }
-                    // Cancelar: La apaga por hoy (hasta el día siguiente)
                     if (DigitalInputHasActivated(placa->cancel)) {
                         alarma_sonando = false;
                         DigitalOutputDeactivate(placa->buzzer);
                     }
                 } else {
-                    // Si no está sonando, operan normalmente para Activar/Desactivar
                     if (DigitalInputHasActivated(placa->accept)) {
                         RelojActivarAlarma(reloj, true);
                     }
@@ -268,107 +358,81 @@ int main(void) {
                 break;
 
             case MODO_MINUTOS:
-                // En este modo la pantalla parpadea sola gracias a CambiarModo(),
-                // solo necesitamos actualizar constantemente el valor en la pantalla
-                // con nuestra copia "borrador" local (hora_actual).
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // 1. Evaluar cancelación (abortar ajustes y volver)
                 if (DigitalInputHasActivated(placa->cancel)) {
-                    CambiarModo(MODO_NORMAL);
+                    CambiarModo(MODO_NORMAL, NULL);
                 }
-                
-                // 2. Evaluar confirmación (Aceptar minutos, pasar a configurar horas)
                 if (DigitalInputHasActivated(placa->accept)) {
-                    CambiarModo(MODO_HORAS);
+                    tiempo_ultima_actividad = contador_ms;
+                    CambiarModo(MODO_HORAS, NULL);
                 }
-
-                // 3. Aumentar minutos (F4)
                 if (DigitalInputHasActivated(placa->f4)) {
-                    // Pasamos el puntero a la parte de los minutos (índice 2)
+                    tiempo_ultima_actividad = contador_ms;
                     IncrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
                 }
-
-                // 4. Disminuir minutos (F3)
                 if (DigitalInputHasActivated(placa->f3)) {
+                    tiempo_ultima_actividad = contador_ms;
                     DecrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
                 }
                 break;
+
             case MODO_HORAS:
-                // En este modo, CambiarModo() ya configuró que parpadeen los primeros 2 dígitos
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // Evaluar cancelación (abortar ajustes y volver a MODO_NORMAL)
                 if (DigitalInputHasActivated(placa->cancel)) {
-                    CambiarModo(MODO_NORMAL);
+                    CambiarModo(MODO_NORMAL, NULL);
                 }
-                
-                // Evaluar confirmación (Aceptar horas y volver a MODO_NORMAL)
                 if (DigitalInputHasActivated(placa->accept)) {
-                    // Aquí se usa la función del reloj para actualizar la hora con los valores ajustados
                     RelojSetHora(reloj, hora_actual);
-                    CambiarModo(MODO_NORMAL);
+                    CambiarModo(MODO_NORMAL, NULL);
                 }
-
-                // Aumentar horas (F4)
                 if (DigitalInputHasActivated(placa->f4)) {
-                    // Pasamos el puntero al inicio del arreglo (índice 0, decenas de hora)
+                    tiempo_ultima_actividad = contador_ms;
                     IncrementarBCD(&hora_actual[0], LIMITE_HORAS);
                 }
-
-                // Disminuir horas (F3)
                 if (DigitalInputHasActivated(placa->f3)) {
+                    tiempo_ultima_actividad = contador_ms;
                     DecrementarBCD(&hora_actual[0], LIMITE_HORAS);
                 }
                 break;
+
             case MODO_MINUTOS_ALARMA:
-                // En este modo la pantalla parpadea sola gracias a CambiarModo(),
-                // solo necesitamos actualizar constantemente el valor en la pantalla
-                // con nuestra copia "borrador" local (hora_actual).
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // Forzamos los 4 puntos encendidos fijos
-                SetPunto(placa->display, 0, true);
-                SetPunto(placa->display, 1, true);
-                SetPunto(placa->display, 2, true);
-                SetPunto(placa->display, 3, true);
-
                 if (DigitalInputHasActivated(placa->cancel)) {
-                    CambiarModo(MODO_NORMAL); // Descarta cambios
+                    CambiarModo(MODO_NORMAL, NULL); 
                 }
                 if (DigitalInputHasActivated(placa->accept)) {
-                    CambiarModo(MODO_HORAS_ALARMA); // Pasa a editar horas de la alarma
+                    tiempo_ultima_actividad = contador_ms;
+                    CambiarModo(MODO_HORAS_ALARMA, NULL); 
                 }
                 if (DigitalInputHasActivated(placa->f4)) {
+                    tiempo_ultima_actividad = contador_ms;
                     IncrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
                 }
                 if (DigitalInputHasActivated(placa->f3)) {
+                    tiempo_ultima_actividad = contador_ms;
                     DecrementarBCD(&hora_actual[2], LIMITE_MINUTOS);
                 }
                 break;
 
             case MODO_HORAS_ALARMA:
-
                 DisplayWriteBCD(placa->display, hora_actual, 4);
 
-                // Forzamos los 4 puntos encendidos fijos
-                SetPunto(placa->display, 0, true);
-                SetPunto(placa->display, 1, true);
-                SetPunto(placa->display, 2, true);
-                SetPunto(placa->display, 3, true);
-
                 if (DigitalInputHasActivated(placa->cancel)) {
-                    CambiarModo(MODO_NORMAL); // Descarta cambios
+                    CambiarModo(MODO_NORMAL, NULL); 
                 }
                 if (DigitalInputHasActivated(placa->accept)) {
-                    // Guardamos el borrador en la Alarma
                     RelojSetAlarma(reloj, hora_actual);
-                    CambiarModo(MODO_NORMAL);
+                    CambiarModo(MODO_NORMAL, NULL);
                 }
                 if (DigitalInputHasActivated(placa->f4)) {
+                    tiempo_ultima_actividad = contador_ms;
                     IncrementarBCD(&hora_actual[0], LIMITE_HORAS);
                 }
                 if (DigitalInputHasActivated(placa->f3)) {
+                    tiempo_ultima_actividad = contador_ms;
                     DecrementarBCD(&hora_actual[0], LIMITE_HORAS);
                 }
                 break;
@@ -377,7 +441,4 @@ int main(void) {
 
     return 0;
 }
-
 /* === End of documentation ==================================================================== */
-
-/*! @} End of module definition for doxygen */
