@@ -23,15 +23,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 SPDX-License-Identifier: MIT
 *************************************************************************************************/
 
-/*! @file main.c
- ** @brief Aplicación principal del Reloj Despertador con FreeRTOS para la placa EDU-CIAA-NXP.
- **/
+/*! 
+ * @file main.c
+ * @brief Aplicación principal del Reloj Despertador con FreeRTOS para la placa EDU-CIAA-NXP.
+ * @details Este módulo contiene la inicialización del hardware, la creación de los recursos
+ *          de concurrencia (Tareas y Grupos de Eventos) y la implementación de la máquina de 
+ *          estados principal que gestiona el funcionamiento del reloj despertador de forma
+ *          no bloqueante[cite: 8, 9].
+ */
 
 #ifndef EDU_CIAA_NXP
 #error "This program can only be compiled for the EDU-CIAA-NXP board"
 #endif
 
-/* === Headers files inclusions ==================================================================================== */
+/* === Headers files inclusions ================================================================ */
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -43,42 +48,65 @@ SPDX-License-Identifier: MIT
 #include "poncho.h"  
 #include "screen.h"  
 
-/* === Private macros definitions ============================================================= */
+/* === Public macros definitions =============================================================== */
 
+/*! @brief Tiempo máximo de inactividad permitido en los modos de edición (30 segundos). */
 #define TIMEOUT_INACTIVIDAD_MS 30000U
-#define TICK_RATE_TECLADO_MS 50U
-#define PULSACION_LARGA_TICKS (3000U / TICK_RATE_TECLADO_MS) // 3 segundos equivalen a 60 ticks de 50ms
 
-/* Máscaras de bits para los eventos de teclado */
+/*! @brief Tasa de refresco y escaneo de la tarea de teclado en milisegundos. */
+#define TICK_RATE_TECLADO_MS 50U
+
+/*! @brief Cantidad de ticks de teclado requeridos para considerar una pulsación como larga (3 segundos). */
+#define PULSACION_LARGA_TICKS (3000U / TICK_RATE_TECLADO_MS)
+
+/*! @brief Máscara de evento para la tecla ACCEPT. */
 #define EVENTO_ACCEPT      (1 << 0)
+/*! @brief Máscara de evento para la tecla CANCEL. */
 #define EVENTO_CANCEL      (1 << 1)
+/*! @brief Máscara de evento para la tecla F3 (Decrementar). */
 #define EVENTO_F3          (1 << 2)
+/*! @brief Máscara de evento para la tecla F4 (Incrementar). */
 #define EVENTO_F4          (1 << 3)
+/*! @brief Máscara de evento para la pulsación larga de la tecla F1 (Configurar Hora). */
 #define EVENTO_F1_LARGO    (1 << 4)
+/*! @brief Máscara de evento para la pulsación larga de la tecla F2 (Configurar Alarma). */
 #define EVENTO_F2_LARGO    (1 << 5)
 
 /* === Private data type declarations ========================================================== */
 
+/*! 
+ * @brief Estados operativos de la máquina de estados del reloj.
+ */
 typedef enum {
-    MODO_SIN_AJUSTAR,
-    MODO_NORMAL,
-    MODO_MINUTOS,
-    MODO_HORAS,
-    MODO_MINUTOS_ALARMA,
-    MODO_HORAS_ALARMA
+    MODO_SIN_AJUSTAR,       /*!< Estado inicial por defecto; la hora no ha sido configurada. */
+    MODO_NORMAL,            /*!< Funcionamiento normal, muestra la hora actual y gestiona la alarma. */
+    MODO_MINUTOS,           /*!< Modo de edición de los minutos de la hora actual. */
+    MODO_HORAS,             /*!< Modo de edición de las horas de la hora actual. */
+    MODO_MINUTOS_ALARMA,    /*!< Modo de edición de los minutos de la alarma. */
+    MODO_HORAS_ALARMA       /*!< Modo de edición de las horas de la alarma. */
 } modo_t;
 
-/* === Private variables definitions ========================================================= */
+/* === Private variables definitions =========================================================== */
 
+/*! @brief Descriptor de la pantalla multiplexada de 7 segmentos. */
 display_t display_global; 
+
+/*! @brief Descriptor del reloj para la gestión de tiempo y alarmas. */
 clock_t reloj; 
+
+/*! @brief Almacena el estado actual de la máquina de estados del sistema. */
 static modo_t modo; 
+
+/*! @brief Bandera lógica que indica de forma asincrónica si la alarma se encuentra en reproducción. */
 volatile bool alarma_sonando = false; 
 
+/*! @brief Límite superior para el incremento circular de minutos en formato BCD (59). */
 static const uint8_t LIMITE_MINUTOS[2] = { 5, 9 }; 
+
+/*! @brief Límite superior para el incremento circular de horas en formato BCD (23). */
 static const uint8_t LIMITE_HORAS[2] = { 2, 3 };   
 
-/* Descriptor del grupo de eventos para la sincronización entre teclado y lógica */
+/*! @brief Descriptor global del grupo de eventos de FreeRTOS para la sincronización entre el teclado y la lógica[cite: 14]. */
 EventGroupHandle_t eventos_teclado;
 
 /* === Private function declarations =========================================================== */
@@ -89,7 +117,6 @@ void SonarAlarma(void);
 void IncrementarBCD(uint8_t numero[2], const uint8_t limite[2]);
 void DecrementarBCD(uint8_t numero[2], const uint8_t limite[2]);
 
-/* Prototipos de Tareas de FreeRTOS */
 void TareaTeclado(void * pvParameters);
 void TareaDisplay(void * pvParameters);
 void TareaLogica(void * pvParameters);
@@ -97,6 +124,15 @@ void TareaReloj(void * pvParameters);
 
 /* === Private function implementation ========================================================= */
 
+/*! 
+ * @brief Controla de forma optimizada el estado físico de un punto decimal de la pantalla.
+ * @details Evalúa si el estado deseado difiere del estado actual para evitar inversiones innecesarias 
+ *          que causen parpadeos irregulares en la visualización.
+ * 
+ * @param[in] display  Descriptor de la pantalla multiplexada.
+ * @param[in] digito   Índice del dígito cuyo punto decimal se desea modificar (0 a 3).
+ * @param[in] encender Booleano que establece el estado deseado: true (encendido) o false (apagado).
+ */
 void SetPunto(display_t display, uint8_t digito, bool encender) {
     static bool estado_puntos[4] = {false, false, false, false};
     
@@ -106,6 +142,14 @@ void SetPunto(display_t display, uint8_t digito, bool encender) {
     }
 }
 
+/*! 
+ * @brief Ejecuta la transición unificada entre los modos operativos del sistema.
+ * @details Actualiza la variable de estado global y configura el comportamiento visual 
+ *          (destellos y puntos) correspondiente al nuevo modo de manera centralizada.
+ * 
+ * @param[in]     nuevo_modo    Estado destino de tipo @ref modo_t.
+ * @param[in,out] hora_borrador Puntero al arreglo BCD temporal. Requerido al transicionar a configuración de alarma.
+ */
 void CambiarModo(modo_t nuevo_modo, hora_t hora_borrador) {
     modo = nuevo_modo;
 
@@ -164,10 +208,23 @@ void CambiarModo(modo_t nuevo_modo, hora_t hora_borrador) {
     }
 }
 
+/*! 
+ * @brief Función callback invocada asincrónicamente por la librería reloj.
+ * @details Modifica la variable global para solicitar la activación de los 
+ *          recursos sonoros gestionados en el lazo principal.
+ */
 void SonarAlarma(void) {
     alarma_sonando = true; 
 }
 
+/*! 
+ * @brief Realiza el incremento circular de un arreglo de dígitos BCD.
+ * @details Resguarda el acarreo posicional y el retorno hacia cero cuando se 
+ *          sobrepasa el límite máximo establecido.
+ * 
+ * @param[in,out] numero Arreglo de 2 elementos conteniendo las decenas [0] y unidades [1].
+ * @param[in]     limite Arreglo de 2 elementos que define el valor límite superior.
+ */
 void IncrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
     numero[1]++; 
     if (numero[1] > 9) {
@@ -180,6 +237,14 @@ void IncrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
     }
 }
 
+/*! 
+ * @brief Realiza el decremento circular de un arreglo de dígitos BCD.
+ * @details Controla el subdesbordamiento, aplicando un retorno circular hacia 
+ *          el límite superior cuando la magnitud desciende por debajo de cero.
+ * 
+ * @param[in,out] numero Arreglo de 2 elementos conteniendo las decenas [0] y unidades [1].
+ * @param[in]     limite Arreglo de 2 elementos que define el valor de reinicio superior.
+ */
 void DecrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
     if (numero[1] == 0) {
         if (numero[0] == 0) {
@@ -196,43 +261,58 @@ void DecrementarBCD(uint8_t numero[2], const uint8_t limite[2]) {
 
 /* === FreeRTOS Tasks Implementation =========================================================== */
 
-/*! @brief Tarea de refresco de pantalla multiplexada. (Mayor Prioridad) */
+/*! 
+ * @brief Tarea encargada del barrido continuo del display multiplexado.
+ * @details Emplea retardos absolutos a través de la API vTaskDelayUntil para garantizar 
+ *          una cadencia estricta de ejecución, eliminando retardos acumulativos y 
+ *          parpadeos[cite: 13].
+ * 
+ * @param[in] pvParameters Puntero opaco a la instancia del hardware (board_t).
+ */
 void TareaDisplay(void * pvParameters) {
     board_t placa = (board_t)pvParameters;
     TickType_t xLastWakeTime = xTaskGetTickCount();
     
     while(true) {
         DisplayRefresh(placa->display);
-        // Garantizamos el barrido constante evitando titileos (ghosting)
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1)); 
     }
 }
 
-/*! @brief Tarea para avanzar el tiempo de la lógica base. (Prioridad Alta) */
+/*! 
+ * @brief Tarea responsable del avance temporal del componente lógico de reloj.
+ * @details Actualiza la librería de reloj llamando de manera determinística a RelojTick,
+ *          emulando la temporización antes provista por el hardware SysTick.
+ * 
+ * @param[in] pvParameters Puntero no utilizado.
+ */
 void TareaReloj(void * pvParameters) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     
     while(true) {
-        //Se requiere llamar RelojTick cada milisegundo internamente
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1)); 
         RelojTick(reloj);
     }
 }
 
-/*! @brief Tarea de escaneo de botones con antirrebote pasivo. (Prioridad Baja) */
+/*! 
+ * @brief Tarea encargada del escaneo pasivo de las teclas e inyección de eventos.
+ * @details Efectúa sondeos de hardware cediendo la ejecución al RTOS por medio de retardos 
+ *          para lograr un filtro antirrebote de software[cite: 2]. Al mismo tiempo, contabiliza las retenciones para eventos de pulsación larga.
+ * 
+ * @param[in] pvParameters Puntero opaco a la instancia del hardware (board_t).
+ */
 void TareaTeclado(void * pvParameters) {
     board_t placa = (board_t)pvParameters;
     uint32_t contador_f1 = 0;
     uint32_t contador_f2 = 0;
 
     while(true) {
-        // Procesamiento directo de flancos
         if (DigitalInputHasActivated(placa->accept)) xEventGroupSetBits(eventos_teclado, EVENTO_ACCEPT);
         if (DigitalInputHasActivated(placa->cancel)) xEventGroupSetBits(eventos_teclado, EVENTO_CANCEL);
         if (DigitalInputHasActivated(placa->f3))     xEventGroupSetBits(eventos_teclado, EVENTO_F3);
         if (DigitalInputHasActivated(placa->f4))     xEventGroupSetBits(eventos_teclado, EVENTO_F4);
 
-        // Algoritmo de retención: F1 pulsado durante 3 Segundos
         if (DigitalInputRead(placa->f1)) {
             contador_f1++;
             if (contador_f1 == PULSACION_LARGA_TICKS) {
@@ -242,7 +322,6 @@ void TareaTeclado(void * pvParameters) {
             contador_f1 = 0; 
         }
 
-        // Algoritmo de retención: F2 pulsado durante 3 Segundos
         if (DigitalInputRead(placa->f2)) {
             contador_f2++;
             if (contador_f2 == PULSACION_LARGA_TICKS) {
@@ -252,12 +331,18 @@ void TareaTeclado(void * pvParameters) {
             contador_f2 = 0; 
         }
 
-        // Bloqueo pasivo para ceder CPU y generar Antirrebote (Debounce)
         vTaskDelay(pdMS_TO_TICKS(TICK_RATE_TECLADO_MS)); 
     }
 }
 
-/*! @brief Tarea del cerebro principal y máquina de estados. (Prioridad Normal) */
+/*! 
+ * @brief Tarea núcleo que evalúa la máquina de estados e interacciones del usuario.
+ * @details Se sirve de la espera pasiva de FreeRTOS para mantenerse suspendida hasta la 
+ *          generación de un evento[cite: 2, 8]. Administra paralelamente el temporizador
+ *          de inactividad utilizando los límites de timeout en el grupo de eventos.
+ * 
+ * @param[in] pvParameters Puntero opaco a la instancia del hardware (board_t).
+ */
 void TareaLogica(void * pvParameters) {
     board_t placa = (board_t)pvParameters;
     hora_t hora_actual; 
@@ -267,7 +352,6 @@ void TareaLogica(void * pvParameters) {
     CambiarModo(MODO_SIN_AJUSTAR, NULL);
 
     while(true) {
-        // La tarea descansa a menos que presiones un botón o expiren los 50ms de timeout
         eventos = xEventGroupWaitBits(
             eventos_teclado, 
             EVENTO_ACCEPT | EVENTO_CANCEL | EVENTO_F3 | EVENTO_F4 | EVENTO_F1_LARGO | EVENTO_F2_LARGO,
@@ -276,27 +360,24 @@ void TareaLogica(void * pvParameters) {
             pdMS_TO_TICKS(50)
         );
 
-        // Control de Timeout por Inactividad (30 Segundos)
         if (eventos != 0) {
-            tiempo_inactividad = 0; // Si el usuario toco algo, reiniciamos inactividad
+            tiempo_inactividad = 0; 
         } else {
             tiempo_inactividad += 50; 
         }
 
         if (modo == MODO_MINUTOS || modo == MODO_HORAS || modo == MODO_MINUTOS_ALARMA || modo == MODO_HORAS_ALARMA) {
             if (tiempo_inactividad >= TIMEOUT_INACTIVIDAD_MS) {
-                CambiarModo(MODO_NORMAL, NULL); // Vuelve atrás descartando modificaciones
+                CambiarModo(MODO_NORMAL, NULL); 
                 tiempo_inactividad = 0;
             }
         }
 
-        // Lectura de tiempo y Refresco Lógico del Display 
         if (modo == MODO_SIN_AJUSTAR || modo == MODO_NORMAL) {
             RelojGetHora(reloj, hora_actual);
         }
         DisplayWriteBCD(placa->display, hora_actual, 4);
 
-        // Gestión de parpadeo de punto central (500ms on / 500ms off)
         if (modo == MODO_SIN_AJUSTAR || modo == MODO_NORMAL) {
             SetPunto(placa->display, 1, ((xTaskGetTickCount() % 1000) < 500));
         }
@@ -315,7 +396,7 @@ void TareaLogica(void * pvParameters) {
                     CambiarModo(MODO_MINUTOS, NULL);
                 }
                 if (eventos & EVENTO_F2_LARGO) {
-                    CambiarModo(MODO_MINUTOS_ALARMA, hora_actual); // Pasa la alarma a buffer temporal
+                    CambiarModo(MODO_MINUTOS_ALARMA, hora_actual); 
                 }
 
                 if (alarma_sonando) {
@@ -350,7 +431,7 @@ void TareaLogica(void * pvParameters) {
             case MODO_HORAS:
                 if (eventos & EVENTO_CANCEL) CambiarModo(MODO_NORMAL, NULL);
                 if (eventos & EVENTO_ACCEPT) {
-                    RelojSetHora(reloj, hora_actual); // Aplicamos y guardamos la hora 
+                    RelojSetHora(reloj, hora_actual); 
                     CambiarModo(MODO_NORMAL, NULL);
                 }
                 if (eventos & EVENTO_F4) IncrementarBCD(&hora_actual[0], LIMITE_HORAS);
@@ -367,7 +448,7 @@ void TareaLogica(void * pvParameters) {
             case MODO_HORAS_ALARMA:
                 if (eventos & EVENTO_CANCEL) CambiarModo(MODO_NORMAL, NULL); 
                 if (eventos & EVENTO_ACCEPT) {
-                    RelojSetAlarma(reloj, hora_actual); // Aplicamos y guardamos la alarma 
+                    RelojSetAlarma(reloj, hora_actual); 
                     CambiarModo(MODO_NORMAL, NULL);
                 }
                 if (eventos & EVENTO_F4) IncrementarBCD(&hora_actual[0], LIMITE_HORAS);
@@ -379,31 +460,32 @@ void TareaLogica(void * pvParameters) {
 
 /* === Public function implementation ========================================================== */
 
+/*! 
+ * @brief Punto de entrada principal del firmware de la aplicación.
+ * @details Se encarga de instanciar los componentes hardware, inicializar la estructura
+ *          de recursos del sistema operativo e invocar el Scheduler de tareas de FreeRTOS.
+ * 
+ * @return int El entorno de FreeRTOS intercepta el retorno; la aplicación no debería culminar.
+ */
 int main(void) {
-    // 1. Inicialización de Hardware y Variables
     board_t placa = BoardCreate();
     display_global = placa->display; 
     
-    // Mantenemos 1000 ticks por segundo para que el reloj avance cada 1ms
     reloj = RelojCreate(1000, SonarAlarma); 
-    
     DigitalOutputDeactivate(placa->buzzer);
 
     hora_t hora_inicial = {1, 2, 0, 0, 0, 0}; 
     RelojSetHora(reloj, hora_inicial);
 
-    // 2. Creación de recursos IPC de RTOS
     eventos_teclado = xEventGroupCreate(); 
 
-    // 3. Creación de las 4 Tareas de FreeRTOS con sus Prioridades 
     xTaskCreate(TareaDisplay, "Display", configMINIMAL_STACK_SIZE, (void*)placa, tskIDLE_PRIORITY + 4, NULL);
     xTaskCreate(TareaReloj,   "Reloj",   configMINIMAL_STACK_SIZE, NULL,         tskIDLE_PRIORITY + 3, NULL);
     xTaskCreate(TareaLogica,  "Logica",  configMINIMAL_STACK_SIZE, (void*)placa, tskIDLE_PRIORITY + 2, NULL);
     xTaskCreate(TareaTeclado, "Teclado", configMINIMAL_STACK_SIZE, (void*)placa, tskIDLE_PRIORITY + 1, NULL);
 
-    // 4. Inicio del Planificador
     vTaskStartScheduler();
 
-    return 0; // El programa nunca deberia abandonar el scheduler
+    return 0; 
 }
 /* === End of documentation ==================================================================== */
